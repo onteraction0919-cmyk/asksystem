@@ -1,92 +1,209 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>사회자 질문 선택</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root{--bg:#0d1117;--card:#111826;--txt:#e6e8ee;--accent:#7c7cff;--muted:#9aa4b2}
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:Pretendard,system-ui,Apple SD Gothic Neo,sans-serif}
-  header{display:flex;justify-content:space-between;align-items:center;padding:24px 3vw}
-  h1{margin:0;font-size:24px}
-  .btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-  .grid{display:grid;gap:18px;padding:0 3vw 40px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
-  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
-  .txt{white-space:pre-wrap;word-break:keep-all;line-height:1.55;font-size:20px}
-  .meta{color:var(--muted);font-size:13px}
-  .actions{display:flex;gap:8px;margin-top:6px}
-  .small{background:#2d3445}
-  .danger{background:#ef4444}
-</style>
+  <meta charset="utf-8" />
+  <title>사회자 질문 선택</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #141a2e;
+      --text: #e9ecf5;
+      --muted: #9aa3ba;
+      --accent: #6c7bff;
+      --danger: #ff5e6c;
+      --radius: 16px;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", Dotum, sans-serif;
+    }
+
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 100px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #cfd3e3;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .btn {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: 0.2s ease;
+      font-size: 15px;
+    }
+
+    .btn:hover {
+      background: #8090ff;
+    }
+
+    .btn.sub {
+      background: #303955;
+      color: var(--muted);
+    }
+
+    .btn.del {
+      background: var(--danger);
+    }
+
+    /* 가운데 정렬용 카드 */
+    .list {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      width: 100%;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 26px 30px;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+      transition: background 0.2s ease;
+      text-align: center;
+    }
+
+    .card:hover {
+      background: #1b2342;
+    }
+
+    .qtext {
+      font-size: 24px;
+      line-height: 1.45;
+      font-weight: 600;
+      margin-bottom: 14px;
+      word-break: keep-all;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .card-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    a.link {
+      color: #aeb7ff;
+      text-decoration: none;
+    }
+
+    @media (max-width: 600px) {
+      .qtext {
+        font-size: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header>
+  <div class="wrap">
     <h1>사회자 질문 선택</h1>
-    <div>
-      <button class="btn small" id="refresh">새로고침</button>
-      <button class="btn danger" id="clearAll">질문 전체삭제</button>
-      <button class="btn small" id="stop">방송 중지</button>
+
+    <div class="toolbar">
+      <button class="btn sub" onclick="reload()">새로고침</button>
+      <button class="btn del" onclick="wipeAll()">질문 전체삭제</button>
+      <a class="btn sub" href="/spotlight" target="_blank">방송화면 열기</a>
     </div>
-  </header>
-  <main class="grid" id="list"></main>
 
-<script>
-const $list = document.getElementById('list');
+    <div id="list" class="list"></div>
+  </div>
 
-async function load() {
-  const r = await fetch('/api/questions').then(r=>r.json());
-  const items = r.items || [];
-  $list.innerHTML = items.map(i => card(i)).join('');
-}
+  <script>
+    async function api(path, opt) {
+      const r = await fetch(path, opt);
+      return r.json();
+    }
 
-function card(i){
-  return `
-  <article class="card" data-id="${i.id}">
-    <div class="txt">${escapeHtml(i.text)}</div>
-    <div class="meta">${new Date(i.ts).toLocaleString()}</div>
-    <div class="actions">
-      <button class="btn" onclick="spotlight('${i.id}')">방송 표시</button>
-      <button class="btn small" onclick="removeOne('${i.id}')">삭제</button>
-    </div>
-  </article>`;
-}
+    function fmt(t) {
+      const d = new Date(t);
+      const z = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}.${z(d.getMonth() + 1)}.${z(d.getDate())} ${z(
+        d.getHours()
+      )}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+    }
 
-function escapeHtml(s){
-  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
+    async function reload() {
+      const j = await api("/api/questions");
+      const box = document.getElementById("list");
+      box.innerHTML = "";
+      if (!j?.items?.length) {
+        box.innerHTML =
+          '<div style="color:#9aa3ba; text-align:center; margin-top:60px;">등록된 질문이 없습니다.</div>';
+        return;
+      }
+      j.items.forEach((q) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.innerHTML = `
+          <div class="qtext">${escapeHtml(q.text)}</div>
+          <div class="meta">등록시각: ${fmt(q.createdAt)}</div>
+          <div class="card-buttons">
+            <button class="btn" onclick="setActive('${q.id}')">방송 표시</button>
+            <button class="btn del" onclick="delQ('${q.id}')">삭제</button>
+          </div>
+        `;
+        box.appendChild(el);
+      });
+    }
 
-async function spotlight(id){
-  await fetch('/api/questions/'+id+'/spotlight',{method:'POST'});
-}
+    async function setActive(id) {
+      await api("/api/active/" + id, { method: "POST" });
+      alert("방송 화면에 반영되었습니다.");
+    }
 
-async function removeOne(id){
-  // 프론트에서만 삭제하는게 아니라, 전체를 갈아끼우기 위해 필터 후 재삽입하는 대신 간단히 재등록 유도 (필요시 개별 삭제 API 추가 가능)
-  const r = await fetch('/api/questions').then(r=>r.json());
-  const left = (r.items||[]).filter(x=>x.id!==id).map(x=>x.text);
-  await fetch('/api/questions',{method:'DELETE'});
-  for(const t of left){
-    await fetch('/api/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});
-  }
-  load();
-}
+    async function delQ(id) {
+      if (!confirm("삭제할까요?")) return;
+      await api("/api/questions/" + id, { method: "DELETE" });
+      reload();
+    }
 
-document.getElementById('clearAll').onclick = async () => {
-  if(!confirm('정말 모든 질문을 삭제할까요?')) return;
-  await fetch('/api/questions',{method:'DELETE'});
-  load();
-};
-document.getElementById('stop').onclick = async () => {
-  await fetch('/api/spotlight',{method:'DELETE'});
-  alert('방송을 중지했습니다.');
-};
-document.getElementById('refresh').onclick = load;
+    async function wipeAll() {
+      if (!confirm("전체 삭제할까요?")) return;
+      await api("/api/questions", { method: "DELETE" });
+      reload();
+    }
 
-// 자동 새로고침(2초)
-setInterval(load, 2000);
-load();
-</script>
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+
+    reload();
+    setInterval(reload, 4000);
+  </script>
 </body>
 </html>

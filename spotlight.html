@@ -1,66 +1,177 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>방송 질문</title>
-<style>
-  :root{--bg:#ffffff;--txt:#111111}
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,sans-serif}
-  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:8vh 6vw;position:relative}
-  .q{font-size:min(5.2vw,64px);line-height:1.25;font-weight:700;white-space:pre-wrap;word-break:keep-all;text-align:left}
-  .time{position:fixed;left:24px;bottom:24px;font-size:14px;color:#444}
-  .logo{position:fixed;right:24px;bottom:24px;max-width:min(18vw,220px);opacity:.92;display:none}
-  .empty{opacity:.35;font-weight:600}
-</style>
+  <meta charset="utf-8" />
+  <title>방송 출력</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      /* 색/스타일 기본값 (URL 파라미터로 덮어쓰기 가능) */
+      --bg-color: #0b1020;                /* 전체 배경 */
+      --box-bg: rgba(255,255,255,0.88);   /* 박스 배경(반투명) */
+      --box-border: rgba(0,0,0,0.08);     /* 박스 테두리 */
+      --text-color: #111;                 /* 글자 색 */
+      --shadow: 0 10px 40px rgba(0,0,0,0.25);
+      --radius: 22px;
+      --box-max-width: 1600px;            /* 박스 최대 너비 */
+      --box-padding-v: 48px;              /* 박스 상하 패딩 */
+      --box-padding-h: 56px;              /* 박스 좌우 패딩 */
+      --logo-size: 110px;                 /* 우하단 로고 너비 */
+      --safe-margin: 5vw;                 /* 화면 가장자리 여백 */
+    }
+
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      background: var(--bg-color);
+      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", Dotum, sans-serif;
+      color: var(--text-color);
+      overflow: hidden;
+    }
+
+    .stage {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: var(--safe-margin);
+    }
+
+    /* 중앙 큰 박스 */
+    .caption-box {
+      width: 100%;
+      max-width: var(--box-max-width);
+      background: var(--box-bg);
+      border: 1px solid var(--box-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: var(--box-padding-v) var(--box-padding-h);
+    }
+
+    /* 텍스트가 박스 내부에서 자동 줄바꿈 & 가운데 정렬 */
+    .caption {
+      margin: 0;
+      text-align: center;      /* 중앙 정렬 */
+      line-height: 1.22;
+      font-weight: 800;
+      word-break: keep-all;    /* 한국어 단어 단위 유지 */
+      overflow-wrap: anywhere; /* 너무 긴 영어 단어도 깨짐 방지 */
+      /* 폰트 크기는 JS에서 자동 조정 */
+    }
+
+    /* 우하단 로고 */
+    .logo {
+      position: fixed;
+      right: calc(var(--safe-margin) - 6px);
+      bottom: calc(var(--safe-margin) - 2px);
+      width: var(--logo-size);
+      opacity: .92;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* 박스 상/중/하 위치 바꾸고 싶을 때(파라미터 boxpos로 제어) */
+    .align-top    { align-items: start; }
+    .align-center { align-items: center; }
+    .align-bottom { align-items: end; }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="q empty" id="q">방송 대기 중…</div>
-    <div class="time" id="t"></div>
-    <img class="logo" id="logo" src="/static/logo.png" alt="logo"
-         onload="this.style.display='block'">
+  <div class="stage align-center" id="stage">
+    <div class="caption-box">
+      <div id="caption" class="caption">
+        …
+      </div>
+    </div>
   </div>
-<script>
-const $q = document.getElementById('q');
-const $t = document.getElementById('t');
 
-function show(item){
-  if(item && item.text){
-    $q.classList.remove('empty');
-    $q.textContent = item.text;
-    $t.textContent = new Date(item.ts || Date.now()).toLocaleString();
-  }else{
-    $q.classList.add('empty');
-    $q.textContent = '방송 대기 중…';
-    $t.textContent = '';
-  }
-}
+  <!-- 우하단 로고(원하면 /static/logo.png 교체) -->
+  <img class="logo" id="logo" src="/static/logo.png" alt="logo" />
 
-// WS 실시간
-let ws;
-function connect(){
-  ws = new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host);
-  ws.onmessage = (e)=>{
-    try{
-      const m = JSON.parse(e.data);
-      if(m.type==='spotlight') show(m.item);
-    }catch(_){}
-  };
-  ws.onclose = ()=> setTimeout(connect, 1500);
-}
-connect();
+  <script>
+    /******************************************************************
+     * 파라미터로 즉석 스타일 조정
+     * 예:  /spotlight?boxbg=ffffffdd&text=#111&boxpos=top&maxw=1400
+     ******************************************************************/
+    const params = new URLSearchParams(location.search);
 
-// 폴백(혹시 WS 막히면 3초마다 확인)
-setInterval(async ()=>{
-  try{
-    const r = await fetch('/api/questions').then(r=>r.json());
-    const items = r.items||[];
-    const cur = items[0]; // 최신 하나 추정 X → WS가 오피셜. 폴백은 방송중인 id가 없으니 생략.
-  }catch(_){}
-}, 3000);
-</script>
+    const setVar = (name, val) => {
+      if (val != null && val !== "") {
+        // hex 짧은 표현 처리
+        if (/^[0-9a-f]{6,8}$/i.test(val)) val = '#' + val;
+        document.documentElement.style.setProperty(name, val);
+      }
+    };
+
+    setVar('--box-max-width', params.get('maxw') ? params.get('maxw')+'px' : null);
+    setVar('--box-bg', params.get('boxbg'));
+    setVar('--text-color', params.get('text'));
+    setVar('--box-border', params.get('border'));
+    setVar('--bg-color', params.get('bg'));
+    setVar('--logo-size', params.get('logosize') ? params.get('logosize')+'px' : null);
+    setVar('--safe-margin', params.get('margin') ? params.get('margin') : null);
+
+    // 박스 위치
+    const boxpos = params.get('boxpos'); // top | center | bottom
+    if (boxpos) {
+      const stage = document.getElementById('stage');
+      stage.classList.remove('align-top','align-center','align-bottom');
+      stage.classList.add(boxpos === 'top' ? 'align-top' : boxpos === 'bottom' ? 'align-bottom' : 'align-center');
+    }
+
+    // 로고 숨기기
+    if (params.get('logo') === 'off') {
+      document.getElementById('logo').style.display = 'none';
+    }
+
+    /******************************************************************
+     * 폰트 자동 맞춤: 박스 안에 꽉차되 줄바꿈/오버플로우 없이 보이게
+     ******************************************************************/
+    const captionEl = document.getElementById('caption');
+    const boxEl = captionEl.parentElement;
+    const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+    function fitFont() {
+      // 기본 시작 크기 (해상도에 비례)
+      let font = Math.round(window.innerWidth / 26); // 대략적인 시작점
+      font = clamp(font, 26, 128);                  // 최소/최대 제한
+      captionEl.style.fontSize = font + 'px';
+
+      // 줄여가며 박스에 맞추기
+      const maxH = boxEl.clientHeight - 8; // 여유
+      const maxW = boxEl.clientWidth - 8;
+      let guard = 120; // 무한루프 방지
+      while (guard-- > 0) {
+        const { scrollHeight, scrollWidth } = captionEl;
+        if (scrollHeight <= maxH && scrollWidth <= maxW) break;
+        font -= 2;
+        if (font <= 18) break;
+        captionEl.style.fontSize = font + 'px';
+      }
+    }
+
+    window.addEventListener('resize', fitFont);
+
+    /******************************************************************
+     * 현재 방송중(Active) 질문 폴링
+     ******************************************************************/
+    async function fetchActive() {
+      try {
+        const r = await fetch('/api/active', { cache: 'no-store' });
+        const j = await r.json();
+        const text = j?.active?.text || '';
+        captionEl.textContent = text || '방송 대기 중…';
+        fitFont();
+      } catch (e) {
+        captionEl.textContent = '네트워크 오류';
+      }
+    }
+
+    setInterval(fetchActive, 1000);
+    fetchActive();
+  </script>
 </body>
 </html>

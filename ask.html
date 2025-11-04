@@ -1,47 +1,55 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>질문 등록</title>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root{--bg:#0d1117;--card:#111826;--txt:#e6e8ee;--accent:#7c7cff}
-  *{box-sizing:border-box}html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:Pretendard,system-ui,Apple SD Gothic Neo,sans-serif;display:grid;place-items:center}
-  .wrap{width:min(1200px,92vw);padding:64px 0}
-  h1{font-size:28px;margin:0 0 24px}
-  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px}
-  textarea{width:100%;min-height:260px;border:1px solid #293242;background:#0b1220;color:var(--txt);padding:16px;border-radius:12px;font-size:20px;line-height:1.5;outline:none}
-  .row{display:flex;gap:10px;margin-top:16px;align-items:center}
-  button{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer}
-  small a{color:#9ab; text-decoration:none}
-</style>
+  <meta charset="utf-8" />
+  <title>질문 등록</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#141a2e; --text:#e9ecf5; --muted:#9aa3ba; --accent:#6c7bff; --radius:16px;
+    }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:Pretendard,"Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Apple SD Gothic Neo","Malgun Gothic",Dotum,sans-serif;}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 20px}
+    h1{font-size:26px;margin:0 0 18px}
+    .panel{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:18px}
+
+    textarea{
+      width:100%;height:240px;background:#0f1530;color:var(--text);border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;padding:14px;font-size:18px;line-height:1.5;resize:vertical;
+    }
+    .row{display:flex;gap:12px;margin-top:12px}
+    .btn{background:var(--accent);border:none;border-radius:10px;color:#fff;padding:10px 16px;font-weight:700;cursor:pointer}
+    .hint{color:var(--muted);margin-top:10px}
+    a.link{color:#aeb7ff;text-decoration:none}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <h1>질문 등록</h1>
-    <div class="card">
-      <textarea id="q" placeholder="질문을 입력하고 '등록'을 누르세요."></textarea>
+    <div class="panel">
+      <textarea id="ta" placeholder="질문을 입력하고 ‘등록’을 누르세요.&#10;가능하면 한 문장으로 간결하게 써 주세요."></textarea>
       <div class="row">
-        <button id="send">등록</button>
-        <small>사회자 페이지: <a href="/mod">/mod</a> · 방송화면: <a href="/spotlight">/spotlight</a></small>
+        <button class="btn" onclick="submitQ()">등록</button>
+        <div class="hint">사회자 페이지: <a class="link" target="_blank" href="/mod">/mod</a> · 방송화면: <a class="link" target="_blank" href="/spotlight">/spotlight</a></div>
       </div>
     </div>
   </div>
-<script>
-document.getElementById('send').onclick = async () => {
-  const text = document.getElementById('q').value.trim();
-  if (!text) return alert('내용이 비어 있습니다.');
-  const r = await fetch('/api/questions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text})
-  }).then(r=>r.json());
-  if(r.ok){ document.getElementById('q').value=''; alert('등록되었습니다.'); }
-  else alert('실패: '+(r.error||'unknown'));
-};
-</script>
+
+  <script>
+    async function submitQ(){
+      const text = document.getElementById('ta').value.trim();
+      if(!text) return alert('내용이 비었습니다.');
+      const r = await fetch('/api/questions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text})
+      });
+      const j = await r.json();
+      if(j?.ok){ document.getElementById('ta').value=''; alert('등록되었습니다.'); }
+      else alert('등록 실패');
+    }
+  </script>
 </body>
 </html>
