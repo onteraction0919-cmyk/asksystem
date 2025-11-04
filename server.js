@@ -1,4 +1,4 @@
-// server.js  — CommonJS 버전 (Render/일반 Node에서 바로 실행 가능)
+// server.js
 const path = require('path');
 const express = require('express');
 const http = require('http');
@@ -6,94 +6,84 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  // 프록시/공용망에서도 잘 붙도록 기본 옵션
+  transports: ['websocket', 'polling'],
+  pingTimeout: 30000,
+  pingInterval: 25000
+});
 
-// ===== 인메모리 상태 =====
-let questions = [];          // [{ id, text, createdAt, selected }]
-let currentSpotlight = null; // { id, text, createdAt } | null
+// -------------------------------
+// In-memory 저장소 (간단 버전)
+// -------------------------------
+let questions = [];     // { id, text, createdAt }
+let spotlightId = null; // 현재 방송중인 질문 id
 
-// ===== 미들웨어 =====
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 헬스체크
+app.get('/health', (_req, res) => res.type('text').send('OK'));
 
-// 정적 파일 (/static/logo.png 등)
+// 정적(로고 등)
 app.use('/static', express.static(path.join(__dirname, 'static')));
 
-// ===== 라우팅 =====
-app.get('/', (_req, res) => {
-  res.redirect('/mod'); // 필요시 변경
-});
+// 페이지 라우팅
+app.get('/', (_req, res) => res.redirect('/ask'));
+app.get('/ask', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'ask.html'))
+);
+app.get('/mod', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'mod.html'))
+);
+app.get('/spotlight', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'spotlight.html'))
+);
 
-app.get('/ask', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'ask.html'));
-});
-
-app.get('/mod', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'mod.html'));
-});
-
-app.get('/spotlight', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'spotlight.html'));
-});
-
-// 헬스체크 (Render 등에서 유용)
-app.get('/health', (_req, res) => res.status(200).send('OK'));
-
-// ===== 소켓 =====
+// -------------------------------
+// Socket.IO
+// -------------------------------
 io.on('connection', (socket) => {
-  // 초기 상태 싱크
-  socket.emit('mod:list:update', questions);
-  socket.emit('spotlight:update', currentSpotlight);
+  // 연결된 클라이언트(주로 사회자)에게 현재 상태 전달
+  socket.emit('questions:update', { list: questions });
 
-  // 질문 등록 (ask 페이지에서 전송)
-  socket.on('ask:new', (payload) => {
-    const text = (payload?.text || '').toString().trim();
+  // 질문 추가
+  socket.on('question:add', (payload) => {
+    const text = (payload?.text ?? '').trim();
     if (!text) return;
+
     const q = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       text,
-      createdAt: Date.now(),
-      selected: false,
+      createdAt: Date.now()
     };
-    questions.unshift(q); // 최신이 앞에 보이도록
-    io.emit('mod:list:update', questions);
+    questions.unshift(q); // 최신이 앞으로
+    io.emit('questions:update', { list: questions });
   });
 
-  // 선택 토글(사회자 체크박스/버튼)
-  socket.on('mod:select', ({ id, value }) => {
-    const idx = questions.findIndex((q) => q.id === id);
-    if (idx >= 0) {
-      questions[idx].selected = !!value;
-      io.emit('mod:list:update', questions);
-    }
+  // 질문 제거
+  socket.on('question:remove', (id) => {
+    questions = questions.filter(q => q.id !== id);
+    if (spotlightId === id) spotlightId = null;
+    io.emit('questions:update', { list: questions });
+    io.emit('spotlight:update', spotlightId ? questions.find(q => q.id === spotlightId) : null);
   });
 
-  // 질문 삭제
-  socket.on('mod:remove', (id) => {
-    questions = questions.filter((q) => q.id !== id);
-    if (currentSpotlight?.id === id) currentSpotlight = null;
-    io.emit('mod:list:update', questions);
-    io.emit('spotlight:update', currentSpotlight);
-  });
-
-  // 방송 표시(스포트라이트)
-  socket.on('mod:spotlight', (id) => {
-    const q = questions.find((x) => x.id === id) || null;
-    currentSpotlight = q;
-    io.emit('spotlight:update', currentSpotlight);
-  });
-
-  // 전체 초기화 (질문/스포트라이트 모두)
-  socket.on('mod:clearAll', () => {
+  // 전체 삭제
+  socket.on('questions:clear', () => {
     questions = [];
-    currentSpotlight = null;
-    io.emit('mod:list:update', questions);
-    io.emit('spotlight:update', currentSpotlight);
+    spotlightId = null;
+    io.emit('questions:update', { list: questions });
+    io.emit('spotlight:update', null);
+  });
+
+  // 방송 표출 설정
+  socket.on('spotlight:set', (id) => {
+    spotlightId = id || null;
+    const obj = spotlightId ? questions.find(q => q.id === spotlightId) : null;
+    io.emit('spotlight:update', obj || null);
   });
 });
 
-// ===== 서버 기동 =====
+// Render/일반 서버 포트
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log('ASK SYSTEM 서버가 시작되었습니다. 포트:', PORT);
+  console.log(`ASK SYSTEM ON : http://localhost:${PORT}`);
 });

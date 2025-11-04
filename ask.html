@@ -1,48 +1,57 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>질문 등록</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-  :root { --brand:#5b4bff; }
-  body{margin:0;background:#0f1220;color:#e9ecff;font-family:system-ui,pretendard,Arial,sans-serif}
-  .wrap{max-width:720px;margin:24px auto;padding:24px}
-  h1{font-size:22px;margin:0 0 16px}
-  textarea{width:100%;min-height:160px;font-size:18px;line-height:1.5;border-radius:12px;border:1px solid #2a2f4a;background:#141830;color:#fff;padding:16px;outline:none}
-  textarea::placeholder{color:#9aa5d1}
-  .row{display:flex;gap:12px;margin-top:12px}
-  button{border:0;border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer}
-  .primary{background:var(--brand);color:#fff}
-  .ghost{background:#1a1f37;color:#c8d0ff}
-  .tip{font-size:13px;color:#97a1cc;margin-top:10px}
-  .logo{position:fixed;right:18px;bottom:18px;opacity:.9}
-  .logo img{height:28px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>질문 등록</title>
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans KR", sans-serif; background:#0f1220; color:#fff; }
+    .wrap { max-width: 840px; margin: 8vh auto; padding: 0 20px; }
+    h1 { font-size: 22px; margin-bottom: 14px; opacity:.9 }
+    textarea {
+      width: 100%; min-height: 180px; padding: 16px; border-radius: 14px; border:1px solid #2a2f55;
+      background: #141736; color:#fff; font-size: 18px; line-height: 1.5; resize: vertical; outline: none;
+    }
+    .row { display:flex; gap:10px; margin-top:12px; align-items:center; }
+    button {
+      background:#6c5ce7; color:#fff; border:none; border-radius:12px; padding:12px 18px; font-weight:700; cursor:pointer;
+    }
+    .hint { opacity:.7; font-size:14px }
+    .brand { position: fixed; right: 16px; bottom: 12px; opacity:.9 }
+    .brand img { height: 20px; }
+  </style>
 </head>
 <body>
   <div class="wrap">
     <h1>질문 등록</h1>
-    <textarea id="text" placeholder="발표자에게 하고 싶은 질문을 적어주세요.&#10;예) PCSK9 억제제 치료 중 중단 이유는 무엇이 가장 많나요?"></textarea>
+    <textarea id="text" placeholder="질문을 입력하고 '등록'을 누르세요."></textarea>
     <div class="row">
-      <button class="primary" id="send">등록</button>
-      <button class="ghost" id="clear">지우기</button>
+      <button id="send">등록</button>
+      <div class="hint">사회자 페이지: <code>/mod</code> · 방송화면: <code>/spotlight</code></div>
     </div>
-    <div class="tip">등록 즉시 사회자 화면에 나타납니다.</div>
   </div>
-  <div class="logo"><img src="/static/logo.png" alt="logo"></div>
 
-<script>
-  const socket = io();
-  document.getElementById('send').onclick = () => {
-    const v = document.getElementById('text').value.trim();
-    if(!v){ alert('질문을 입력해주세요.'); return; }
-    socket.emit('ask:submit', v);
-    document.getElementById('text').value = '';
-    alert('제출되었습니다!');
-  };
-  document.getElementById('clear').onclick = () => { document.getElementById('text').value=''; };
-</script>
+  <div class="brand"><img src="/static/logo.png" alt="brand" /></div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+    const socket = io({ transports: ['websocket','polling'] });
+
+    const $text = document.getElementById('text');
+    const $send = document.getElementById('send');
+
+    function submit() {
+      const t = $text.value.trim();
+      if (!t) return;
+      socket.emit('question:add', { text: t });
+      $text.value = '';
+      $text.focus();
+    }
+
+    $send.addEventListener('click', submit);
+    $text.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit();
+    });
+  </script>
 </body>
 </html>

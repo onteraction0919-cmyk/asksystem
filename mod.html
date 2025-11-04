@@ -2,263 +2,120 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>사회자 질문 선택</title>
   <style>
-    :root {
-      --bg: #0b0e17;
-      --card: #151a28;
-      --card-line: #2a3350;
-      --text: #e9eefc;
-      --sub: #9fb0d6;
-      --accent: #6e7dff;
-      --accent-weak: rgba(110, 125, 255, 0.18);
-      --danger: #ff5670;
-      --success: #3ecf8e;
+    :root{ --bg:#0e1025; --card:#14183a; --text:#e9ecff; --muted:#9aa3c7; --ring:#6c5ce7; }
+    *{ box-sizing: border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans KR", sans-serif; }
+    .wrap{ max-width:1200px; margin: 24px auto; padding: 0 18px; }
+    header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:12px; }
+    h1{ font-size:20px; margin:0; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    button{ background:var(--ring); border:none; color:#fff; border-radius:10px; padding:9px 14px; font-weight:700; cursor:pointer; }
+    button.outline{ background:transparent; border:1px solid #2a2f55; color:#dbe0ff; }
+    .grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; margin-top:14px; }
+    @media (max-width: 1024px){ .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 640px){ .grid{ grid-template-columns: 1fr; } }
+    .card{
+      background:var(--card); border:1px solid #202657; border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
     }
-
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(1200px 600px at 80% -10%, #1b2040 0%, transparent 60%) var(--bg);
-      color: var(--text);
-    }
-
-    .wrap {
-      max-width: 1200px;
-      margin: 32px auto 120px;
-      padding: 0 20px;
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 22px;
-      letter-spacing: 0.5px;
-    }
-
-    .btns {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      border: 1px solid var(--card-line);
-      background: #0f1424;
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-    }
-    .btn:hover { border-color: #3b4a77; }
-    .btn.primary { background: var(--accent-weak); border-color: var(--accent); }
-    .btn.success { background: rgba(62, 207, 142, .12); border-color: var(--success); }
-    .btn.danger { background: rgba(255, 86, 112, .12); border-color: var(--danger); }
-
-    /* 그리드(세 카드 균일, 자동 늘어남, 스크롤바 제거) */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
-    }
-    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 720px)  { .grid { grid-template-columns: 1fr; } }
-
-    .card {
-      border: 1px solid var(--card-line);
-      background: linear-gradient(180deg, #151a28 0%, #111725 100%);
-      border-radius: 16px;
-      padding: 16px 16px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: border-color .2s, transform .15s;
-    }
-    .card:hover { border-color: #3b4a77; transform: translateY(-1px); }
-    .card.selected { outline: 2px solid var(--accent); }
-
-    .qtext {
-      font-size: 18px;
-      line-height: 1.6;
-      color: var(--text);
-      white-space: pre-wrap;       /* 줄바꿈 그대로, 스크롤 대신 줄바꿈 */
-      word-break: keep-all;        /* 한국어 단어 보존 */
-    }
-
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      color: var(--sub);
-      font-size: 13px;
-    }
-
-    .row-btns {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    /* 하단 로고 */
-    .brand {
-      position: fixed;
-      right: 16px;
-      bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      opacity: 0.85;
-      pointer-events: none;
-    }
-    .brand img { height: 28px; filter: drop-shadow(0 0 10px rgba(0,0,0,.6)); }
-
-    /* 상단 상태 라인 */
-    .bar {
-      margin-bottom: 14px;
-      padding: 10px 14px;
-      border: 1px dashed #2a3350;
-      border-radius: 12px;
-      color: var(--sub);
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-    .spot {
-      color: var(--success);
-      font-weight: 700;
-    }
+    .text{ white-space: pre-wrap; word-break: keep-all; line-height:1.6; font-size:18px; }
+    .foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .time{ color:var(--muted); font-size:14px; }
+    .btns{ display:flex; gap:8px; }
+    .brand{ position: fixed; right: 16px; bottom: 12px; opacity:.9 }
+    .brand img{ height:20px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <h1>사회자 질문 선택</h1>
-      <div class="btns">
-        <button class="btn success" id="btnRefresh">새로고침</button>
-        <button class="btn danger" id="btnClearAll">질문 전체삭제</button>
-        <a class="btn primary" href="/spotlight" target="_blank" rel="noopener">방송 화면 열기</a>
+      <div class="actions">
+        <button class="outline" id="refresh">새로고침</button>
+        <button id="clear">질문 전체삭제</button>
       </div>
     </header>
 
-    <div class="bar">
-      <span>총 질문: <b id="count">0</b>개</span>
-      <span>현재 방송표시:
-        <b id="nowSpot" class="spot">없음</b>
-      </span>
-    </div>
-
-    <section id="list" class="grid" aria-live="polite"></section>
+    <div id="list" class="grid"></div>
   </div>
 
-  <!-- 회사 로고: /static/logo.png 로 두면 자동 노출 -->
-  <div class="brand">
-    <img src="/static/logo.png" alt="brand logo" />
-  </div>
+  <div class="brand"><img src="/static/logo.png" alt="brand" /></div>
 
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
   <script>
-    const socket = io();
+    const socket = io({ transports: ['websocket','polling'] });
     const $list = document.getElementById('list');
-    const $count = document.getElementById('count');
-    const $nowSpot = document.getElementById('nowSpot');
-    const $btnClearAll = document.getElementById('btnClearAll');
-    const $btnRefresh  = document.getElementById('btnRefresh');
+    const $refresh = document.getElementById('refresh');
+    const $clear = document.getElementById('clear');
 
-    let items = [];
-    let spotlight = null;
-
-    function fmtTime(t) {
-      const d = new Date(t);
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      const ss = String(d.getSeconds()).padStart(2,'0');
-      return `${hh}:${mm}:${ss}`;
+    function fmt(ts){
+      const d = new Date(ts);
+      const y = d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+      const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0'), ss=String(d.getSeconds()).padStart(2,'0');
+      return `${y}.${m}.${day} ${hh}:${mm}:${ss}`;
     }
 
-    function render() {
+    function render(list){
       $list.innerHTML = '';
-      $count.textContent = String(items.length);
-      $nowSpot.textContent = spotlight?.text ? '표시 중' : '없음';
-
-      for (const q of items) {
-        const card = document.createElement('article');
-        card.className = 'card' + (q.selected ? ' selected' : '');
-        card.dataset.id = q.id;
+      if(!list || !list.length){
+        $list.innerHTML = '<div style="opacity:.7">등록된 질문이 없습니다.</div>';
+        return;
+      }
+      for(const q of list){
+        const card = document.createElement('div');
+        card.className = 'card';
 
         const text = document.createElement('div');
-        text.className = 'qtext';
+        text.className = 'text';
         text.textContent = q.text;
-        card.appendChild(text);
 
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.innerHTML = `
-          <span>${fmtTime(q.createdAt)}</span>
-          <div class="row-btns">
-            <button class="btn success" data-act="spot">방송표시</button>
-            <button class="btn" data-act="select">${q.selected ? '선택 해제' : '선택'}</button>
-            <button class="btn danger" data-act="remove">삭제</button>
-          </div>`;
-        card.appendChild(meta);
+        const foot = document.createElement('div');
+        foot.className = 'foot';
 
-        $list.appendChild(card);
+        const time = document.createElement('div');
+        time.className = 'time';
+        time.textContent = fmt(q.createdAt);
+
+        const btns = document.createElement('div');
+        btns.className = 'btns';
+
+        const btnShow = document.createElement('button');
+        btnShow.textContent = '방송 표시';
+        btnShow.addEventListener('click', () => {
+          socket.emit('spotlight:set', q.id);
+        });
+
+        const btnRemove = document.createElement('button');
+        btnRemove.className = 'outline';
+        btnRemove.textContent = '삭제';
+        btnRemove.addEventListener('click', () => {
+          socket.emit('question:remove', q.id);
+        });
+
+        btns.append(btnShow, btnRemove);
+        foot.append(time, btns);
+        card.append(text, foot);
+        $list.append(card);
       }
     }
 
-    // 이벤트 바인딩 (버튼 델리게이션)
-    $list.addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      const act = btn.dataset.act;
-      const card = btn.closest('.card');
-      const id = card?.dataset?.id;
-      if (!act || !id) return;
-
-      if (act === 'spot') {
-        socket.emit('mod:spotlight', id);
-      }
-      if (act === 'select') {
-        const cur = items.find(x => x.id === id)?.selected ?? false;
-        socket.emit('mod:select', { id, value: !cur });
-      }
-      if (act === 'remove') {
-        if (confirm('삭제하시겠습니까?')) socket.emit('mod:remove', id);
-      }
+    // 서버가 푸시해주는 최신 목록
+    socket.on('questions:update', (payload) => {
+      render(payload?.list || []);
     });
 
-    $btnClearAll.onclick = () => {
-      if (confirm('모든 질문과 방송표시를 초기화합니다. 계속할까요?')) {
-        socket.emit('mod:clearAll');
-      }
-    };
-    $btnRefresh.onclick = () => window.location.reload();
-
-    // 소켓 수신
-    socket.on('mod:list:update', (list) => {
-      items = Array.isArray(list) ? list : [];
-      render();
+    $refresh.addEventListener('click', () => {
+      // 재연결 트릭(임시 새로고침)
+      socket.emit('question:add', { text: '' }); // 빈 값은 서버에서 무시됨
     });
-    socket.on('spotlight:update', (q) => {
-      spotlight = q || null;
-      $nowSpot.textContent = spotlight ? '표시 중' : '없음';
+
+    $clear.addEventListener('click', () => {
+      if(confirm('정말로 모든 질문을 삭제할까요?')){
+        socket.emit('questions:clear');
+      }
     });
   </script>
 </body>

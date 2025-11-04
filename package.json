@@ -1,16 +1,14 @@
 {
   "name": "asksystem",
   "version": "1.0.0",
+  "description": "Simple Q&A control with Socket.IO",
   "private": true,
-  "description": "Simple Q&A live system (ask / moderator / spotlight)",
-  "main": "server.js",
   "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
   "engines": {
     "node": ">=18 <=22"
-  },
-  "scripts": {
-    "start": "node server.js",
-    "build": "echo \"no build step\""
   },
   "dependencies": {
     "express": "^4.19.2",
