@@ -1,97 +1,265 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>사회자 질문 선택</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-  :root{
-    --bg:#0e101a; --card:#171b2e; --text:#e8ecff; --sub:#9aa5d1;
-    --brand:#5b4bff; --ok:#4ad1a8;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,pretendard,Arial,sans-serif}
-  header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#0b0d16;position:sticky;top:0;z-index:5;border-bottom:1px solid #222740}
-  header h1{font-size:18px;margin:0}
-  header .btns{display:flex;gap:8px}
-  .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-  .ghost{background:#1a1f37;color:#cbd4ff}
-  .danger{background:#2d2233;color:#ff6d91}
-  main{max-width:1400px;margin:0 auto;padding:18px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-  @media (max-width:1200px){ .grid{grid-template-columns:repeat(2,1fr);} }
-  @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
-  .card{background:var(--card);border:1px solid #20264a;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:180px}
-  .title{font-size:15px;font-weight:700;color:#b9c3ff}
-  .text{font-size:18px;line-height:1.6;white-space:pre-wrap;word-break:keep-all}
-  .meta{font-size:12px;color:var(--sub)}
-  .actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .pill{padding:8px 12px;border-radius:999px;border:0;cursor:pointer;font-weight:700}
-  .broad{background:var(--brand);color:#fff}
-  .sel{background:var(--ok);color:#001a14}
-  .def{background:#2a2f48;color:#cfe2ff}
-  .outline{background:transparent;border:1px solid #39406a;color:#cbd4ff}
-  .active{box-shadow:0 0 0 2px #8c82ff inset}
-</style>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
+  />
+  <title>사회자 질문 선택</title>
+  <style>
+    :root {
+      --bg: #0b0e17;
+      --card: #151a28;
+      --card-line: #2a3350;
+      --text: #e9eefc;
+      --sub: #9fb0d6;
+      --accent: #6e7dff;
+      --accent-weak: rgba(110, 125, 255, 0.18);
+      --danger: #ff5670;
+      --success: #3ecf8e;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 600px at 80% -10%, #1b2040 0%, transparent 60%) var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 32px auto 120px;
+      padding: 0 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+    }
+
+    .btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--card-line);
+      background: #0f1424;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .btn:hover { border-color: #3b4a77; }
+    .btn.primary { background: var(--accent-weak); border-color: var(--accent); }
+    .btn.success { background: rgba(62, 207, 142, .12); border-color: var(--success); }
+    .btn.danger { background: rgba(255, 86, 112, .12); border-color: var(--danger); }
+
+    /* 그리드(세 카드 균일, 자동 늘어남, 스크롤바 제거) */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 720px)  { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      border: 1px solid var(--card-line);
+      background: linear-gradient(180deg, #151a28 0%, #111725 100%);
+      border-radius: 16px;
+      padding: 16px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color .2s, transform .15s;
+    }
+    .card:hover { border-color: #3b4a77; transform: translateY(-1px); }
+    .card.selected { outline: 2px solid var(--accent); }
+
+    .qtext {
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;       /* 줄바꿈 그대로, 스크롤 대신 줄바꿈 */
+      word-break: keep-all;        /* 한국어 단어 보존 */
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: var(--sub);
+      font-size: 13px;
+    }
+
+    .row-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* 하단 로고 */
+    .brand {
+      position: fixed;
+      right: 16px;
+      bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+    .brand img { height: 28px; filter: drop-shadow(0 0 10px rgba(0,0,0,.6)); }
+
+    /* 상단 상태 라인 */
+    .bar {
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border: 1px dashed #2a3350;
+      border-radius: 12px;
+      color: var(--sub);
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .spot {
+      color: var(--success);
+      font-weight: 700;
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h1>사회자 질문 선택</h1>
-  <div class="btns">
-    <button class="btn ghost" id="refresh">새로고침</button>
-    <button class="btn danger" id="clearSpot">방송 비우기</button>
-  </div>
-</header>
-
-<main>
-  <div id="count" style="margin:0 0 12px 2px;color:#9aa5d1;font-size:14px;">—</div>
-  <div class="grid" id="list"></div>
-</main>
-
-<script>
-const socket = io();
-const $list = document.getElementById('list');
-const $count = document.getElementById('count');
-let state = { questions:[], currentSpotlight:null };
-
-function fmt(ts){ const d=new Date(ts);const z=n=>String(n).padStart(2,'0');return `${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
-
-function render(){
-  $count.textContent = `총 ${state.questions.length}건 / 방송중: ${state.currentSpotlight ? state.currentSpotlight.id : '없음'}`;
-  $list.innerHTML = '';
-  state.questions.forEach(q=>{
-    const el = document.createElement('div');
-    el.className = 'card' + (state.currentSpotlight && state.currentSpotlight.id===q.id ? ' active':'');
-
-    el.innerHTML = `
-      <div class="title">질문 #${q.id} · <span style="color:#9aa5d1">${fmt(q.ts)}</span></div>
-      <div class="text">${q.text.replace(/</g,'&lt;')}</div>
-      <div class="meta">상태: ${q.status}</div>
-      <div class="actions">
-        <button class="pill broad">방송 표시</button>
-        <button class="pill sel">선택</button>
-        <button class="pill def">대기</button>
-        <button class="pill outline">미방송</button>
+  <div class="wrap">
+    <header>
+      <h1>사회자 질문 선택</h1>
+      <div class="btns">
+        <button class="btn success" id="btnRefresh">새로고침</button>
+        <button class="btn danger" id="btnClearAll">질문 전체삭제</button>
+        <a class="btn primary" href="/spotlight" target="_blank" rel="noopener">방송 화면 열기</a>
       </div>
-    `;
-    const [bBroad,bSel,bDef,bClear] = el.querySelectorAll('button');
-    bBroad.onclick = ()=> socket.emit('spotlight:set', { id:q.id });
-    bSel.onclick   = ()=> socket.emit('mod:updateStatus', { id:q.id, status:'selected' });
-    bDef.onclick   = ()=> socket.emit('mod:updateStatus', { id:q.id, status:'deferred' });
-    bClear.onclick = ()=> socket.emit('spotlight:clear');
+    </header>
 
-    $list.appendChild(el);
-  });
-}
+    <div class="bar">
+      <span>총 질문: <b id="count">0</b>개</span>
+      <span>현재 방송표시:
+        <b id="nowSpot" class="spot">없음</b>
+      </span>
+    </div>
 
-socket.emit('init:please');
-socket.on('init:data',  d=>{ state=d; render(); });
-socket.on('mod:list:update', qs=>{ state.questions=qs; render(); });
-socket.on('spotlight:update', s=>{ state.currentSpotlight=s; render(); });
+    <section id="list" class="grid" aria-live="polite"></section>
+  </div>
 
-document.getElementById('refresh').onclick = ()=> socket.emit('init:please');
-document.getElementById('clearSpot').onclick = ()=> socket.emit('spotlight:clear');
-</script>
+  <!-- 회사 로고: /static/logo.png 로 두면 자동 노출 -->
+  <div class="brand">
+    <img src="/static/logo.png" alt="brand logo" />
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+    const socket = io();
+    const $list = document.getElementById('list');
+    const $count = document.getElementById('count');
+    const $nowSpot = document.getElementById('nowSpot');
+    const $btnClearAll = document.getElementById('btnClearAll');
+    const $btnRefresh  = document.getElementById('btnRefresh');
+
+    let items = [];
+    let spotlight = null;
+
+    function fmtTime(t) {
+      const d = new Date(t);
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const ss = String(d.getSeconds()).padStart(2,'0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function render() {
+      $list.innerHTML = '';
+      $count.textContent = String(items.length);
+      $nowSpot.textContent = spotlight?.text ? '표시 중' : '없음';
+
+      for (const q of items) {
+        const card = document.createElement('article');
+        card.className = 'card' + (q.selected ? ' selected' : '');
+        card.dataset.id = q.id;
+
+        const text = document.createElement('div');
+        text.className = 'qtext';
+        text.textContent = q.text;
+        card.appendChild(text);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = `
+          <span>${fmtTime(q.createdAt)}</span>
+          <div class="row-btns">
+            <button class="btn success" data-act="spot">방송표시</button>
+            <button class="btn" data-act="select">${q.selected ? '선택 해제' : '선택'}</button>
+            <button class="btn danger" data-act="remove">삭제</button>
+          </div>`;
+        card.appendChild(meta);
+
+        $list.appendChild(card);
+      }
+    }
+
+    // 이벤트 바인딩 (버튼 델리게이션)
+    $list.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      const card = btn.closest('.card');
+      const id = card?.dataset?.id;
+      if (!act || !id) return;
+
+      if (act === 'spot') {
+        socket.emit('mod:spotlight', id);
+      }
+      if (act === 'select') {
+        const cur = items.find(x => x.id === id)?.selected ?? false;
+        socket.emit('mod:select', { id, value: !cur });
+      }
+      if (act === 'remove') {
+        if (confirm('삭제하시겠습니까?')) socket.emit('mod:remove', id);
+      }
+    });
+
+    $btnClearAll.onclick = () => {
+      if (confirm('모든 질문과 방송표시를 초기화합니다. 계속할까요?')) {
+        socket.emit('mod:clearAll');
+      }
+    };
+    $btnRefresh.onclick = () => window.location.reload();
+
+    // 소켓 수신
+    socket.on('mod:list:update', (list) => {
+      items = Array.isArray(list) ? list : [];
+      render();
+    });
+    socket.on('spotlight:update', (q) => {
+      spotlight = q || null;
+      $nowSpot.textContent = spotlight ? '표시 중' : '없음';
+    });
+  </script>
 </body>
 </html>
