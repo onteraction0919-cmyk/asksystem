@@ -1,103 +1,66 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport"
-        content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
-  <title>방송 질문</title>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --text: #111111;
-      --muted: #666;
-      --accent: #111111;
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: Pretendard, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, "Apple SD Gothic Neo", "Noto Sans KR", "맑은 고딕", sans-serif;
-    }
-    .wrap {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6vh 5vw;
-    }
-    .box {
-      max-width: 1400px;
-      width: 100%;
-    }
-    .q {
-      font-size: clamp(32px, 5vw, 64px);
-      line-height: 1.22;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      white-space: pre-wrap;
-      word-break: keep-all;
-    }
-    .time {
-      margin-top: 18px;
-      color: var(--muted);
-      font-size: clamp(14px, 1.2vw, 18px);
-      font-weight: 600;
-    }
-    /* 하단 로고(있으면 자동 노출) */
-    .brand {
-      position: fixed;
-      right: 18px;
-      bottom: 14px;
-      opacity: .9;
-      pointer-events: none;
-    }
-    .brand img { height: 24px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>방송 질문</title>
+<style>
+  :root{--bg:#ffffff;--txt:#111111}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:Inter,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,sans-serif}
+  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:8vh 6vw;position:relative}
+  .q{font-size:min(5.2vw,64px);line-height:1.25;font-weight:700;white-space:pre-wrap;word-break:keep-all;text-align:left}
+  .time{position:fixed;left:24px;bottom:24px;font-size:14px;color:#444}
+  .logo{position:fixed;right:24px;bottom:24px;max-width:min(18vw,220px);opacity:.92;display:none}
+  .empty{opacity:.35;font-weight:600}
+</style>
 </head>
 <body>
   <div class="wrap">
-    <div class="box">
-      <div id="q" class="q">방송 대기 중…</div>
-      <div id="t" class="time">—</div>
-    </div>
+    <div class="q empty" id="q">방송 대기 중…</div>
+    <div class="time" id="t"></div>
+    <img class="logo" id="logo" src="/static/logo.png" alt="logo"
+         onload="this.style.display='block'">
   </div>
+<script>
+const $q = document.getElementById('q');
+const $t = document.getElementById('t');
 
-  <div class="brand">
-    <img src="/static/logo.png" alt="brand" />
-  </div>
+function show(item){
+  if(item && item.text){
+    $q.classList.remove('empty');
+    $q.textContent = item.text;
+    $t.textContent = new Date(item.ts || Date.now()).toLocaleString();
+  }else{
+    $q.classList.add('empty');
+    $q.textContent = '방송 대기 중…';
+    $t.textContent = '';
+  }
+}
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-  <script>
-    // 사내/카페 Wi-Fi 등에서 WebSocket이 막히는 경우 대비
-    const socket = io({ transports: ['websocket','polling'] });
+// WS 실시간
+let ws;
+function connect(){
+  ws = new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host);
+  ws.onmessage = (e)=>{
+    try{
+      const m = JSON.parse(e.data);
+      if(m.type==='spotlight') show(m.item);
+    }catch(_){}
+  };
+  ws.onclose = ()=> setTimeout(connect, 1500);
+}
+connect();
 
-    const $q = document.getElementById('q');
-    const $t = document.getElementById('t');
-
-    function fmtTime(ts) {
-      if (!ts) return '—';
-      const d = new Date(ts);
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      const ss = String(d.getSeconds()).padStart(2,'0');
-      return `${y}.${m}.${dd} ${hh}:${mm}:${ss}`;
-    }
-
-    // 현재 방송 표시되는 질문 수신
-    socket.on('spotlight:update', (q) => {
-      if (q?.text) {
-        $q.textContent = q.text;
-        $t.textContent = fmtTime(q.createdAt);
-      } else {
-        $q.textContent = '방송 대기 중…';
-        $t.textContent = '—';
-      }
-    });
-  </script>
+// 폴백(혹시 WS 막히면 3초마다 확인)
+setInterval(async ()=>{
+  try{
+    const r = await fetch('/api/questions').then(r=>r.json());
+    const items = r.items||[];
+    const cur = items[0]; // 최신 하나 추정 X → WS가 오피셜. 폴백은 방송중인 id가 없으니 생략.
+  }catch(_){}
+}, 3000);
+</script>
 </body>
 </html>

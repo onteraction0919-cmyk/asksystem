@@ -1,122 +1,92 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>사회자 질문 선택</title>
-  <style>
-    :root{ --bg:#0e1025; --card:#14183a; --text:#e9ecff; --muted:#9aa3c7; --ring:#6c5ce7; }
-    *{ box-sizing: border-box; }
-    body{ margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans KR", sans-serif; }
-    .wrap{ max-width:1200px; margin: 24px auto; padding: 0 18px; }
-    header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:12px; }
-    h1{ font-size:20px; margin:0; }
-    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    button{ background:var(--ring); border:none; color:#fff; border-radius:10px; padding:9px 14px; font-weight:700; cursor:pointer; }
-    button.outline{ background:transparent; border:1px solid #2a2f55; color:#dbe0ff; }
-    .grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; margin-top:14px; }
-    @media (max-width: 1024px){ .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media (max-width: 640px){ .grid{ grid-template-columns: 1fr; } }
-    .card{
-      background:var(--card); border:1px solid #202657; border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-    }
-    .text{ white-space: pre-wrap; word-break: keep-all; line-height:1.6; font-size:18px; }
-    .foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .time{ color:var(--muted); font-size:14px; }
-    .btns{ display:flex; gap:8px; }
-    .brand{ position: fixed; right: 16px; bottom: 12px; opacity:.9 }
-    .brand img{ height:20px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>사회자 질문 선택</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0d1117;--card:#111826;--txt:#e6e8ee;--accent:#7c7cff;--muted:#9aa4b2}
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:Pretendard,system-ui,Apple SD Gothic Neo,sans-serif}
+  header{display:flex;justify-content:space-between;align-items:center;padding:24px 3vw}
+  h1{margin:0;font-size:24px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .grid{display:grid;gap:18px;padding:0 3vw 40px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .txt{white-space:pre-wrap;word-break:keep-all;line-height:1.55;font-size:20px}
+  .meta{color:var(--muted);font-size:13px}
+  .actions{display:flex;gap:8px;margin-top:6px}
+  .small{background:#2d3445}
+  .danger{background:#ef4444}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>사회자 질문 선택</h1>
-      <div class="actions">
-        <button class="outline" id="refresh">새로고침</button>
-        <button id="clear">질문 전체삭제</button>
-      </div>
-    </header>
+  <header>
+    <h1>사회자 질문 선택</h1>
+    <div>
+      <button class="btn small" id="refresh">새로고침</button>
+      <button class="btn danger" id="clearAll">질문 전체삭제</button>
+      <button class="btn small" id="stop">방송 중지</button>
+    </div>
+  </header>
+  <main class="grid" id="list"></main>
 
-    <div id="list" class="grid"></div>
-  </div>
+<script>
+const $list = document.getElementById('list');
 
-  <div class="brand"><img src="/static/logo.png" alt="brand" /></div>
+async function load() {
+  const r = await fetch('/api/questions').then(r=>r.json());
+  const items = r.items || [];
+  $list.innerHTML = items.map(i => card(i)).join('');
+}
 
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-  <script>
-    const socket = io({ transports: ['websocket','polling'] });
-    const $list = document.getElementById('list');
-    const $refresh = document.getElementById('refresh');
-    const $clear = document.getElementById('clear');
+function card(i){
+  return `
+  <article class="card" data-id="${i.id}">
+    <div class="txt">${escapeHtml(i.text)}</div>
+    <div class="meta">${new Date(i.ts).toLocaleString()}</div>
+    <div class="actions">
+      <button class="btn" onclick="spotlight('${i.id}')">방송 표시</button>
+      <button class="btn small" onclick="removeOne('${i.id}')">삭제</button>
+    </div>
+  </article>`;
+}
 
-    function fmt(ts){
-      const d = new Date(ts);
-      const y = d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-      const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0'), ss=String(d.getSeconds()).padStart(2,'0');
-      return `${y}.${m}.${day} ${hh}:${mm}:${ss}`;
-    }
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
 
-    function render(list){
-      $list.innerHTML = '';
-      if(!list || !list.length){
-        $list.innerHTML = '<div style="opacity:.7">등록된 질문이 없습니다.</div>';
-        return;
-      }
-      for(const q of list){
-        const card = document.createElement('div');
-        card.className = 'card';
+async function spotlight(id){
+  await fetch('/api/questions/'+id+'/spotlight',{method:'POST'});
+}
 
-        const text = document.createElement('div');
-        text.className = 'text';
-        text.textContent = q.text;
+async function removeOne(id){
+  // 프론트에서만 삭제하는게 아니라, 전체를 갈아끼우기 위해 필터 후 재삽입하는 대신 간단히 재등록 유도 (필요시 개별 삭제 API 추가 가능)
+  const r = await fetch('/api/questions').then(r=>r.json());
+  const left = (r.items||[]).filter(x=>x.id!==id).map(x=>x.text);
+  await fetch('/api/questions',{method:'DELETE'});
+  for(const t of left){
+    await fetch('/api/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});
+  }
+  load();
+}
 
-        const foot = document.createElement('div');
-        foot.className = 'foot';
+document.getElementById('clearAll').onclick = async () => {
+  if(!confirm('정말 모든 질문을 삭제할까요?')) return;
+  await fetch('/api/questions',{method:'DELETE'});
+  load();
+};
+document.getElementById('stop').onclick = async () => {
+  await fetch('/api/spotlight',{method:'DELETE'});
+  alert('방송을 중지했습니다.');
+};
+document.getElementById('refresh').onclick = load;
 
-        const time = document.createElement('div');
-        time.className = 'time';
-        time.textContent = fmt(q.createdAt);
-
-        const btns = document.createElement('div');
-        btns.className = 'btns';
-
-        const btnShow = document.createElement('button');
-        btnShow.textContent = '방송 표시';
-        btnShow.addEventListener('click', () => {
-          socket.emit('spotlight:set', q.id);
-        });
-
-        const btnRemove = document.createElement('button');
-        btnRemove.className = 'outline';
-        btnRemove.textContent = '삭제';
-        btnRemove.addEventListener('click', () => {
-          socket.emit('question:remove', q.id);
-        });
-
-        btns.append(btnShow, btnRemove);
-        foot.append(time, btns);
-        card.append(text, foot);
-        $list.append(card);
-      }
-    }
-
-    // 서버가 푸시해주는 최신 목록
-    socket.on('questions:update', (payload) => {
-      render(payload?.list || []);
-    });
-
-    $refresh.addEventListener('click', () => {
-      // 재연결 트릭(임시 새로고침)
-      socket.emit('question:add', { text: '' }); // 빈 값은 서버에서 무시됨
-    });
-
-    $clear.addEventListener('click', () => {
-      if(confirm('정말로 모든 질문을 삭제할까요?')){
-        socket.emit('questions:clear');
-      }
-    });
-  </script>
+// 자동 새로고침(2초)
+setInterval(load, 2000);
+load();
+</script>
 </body>
 </html>

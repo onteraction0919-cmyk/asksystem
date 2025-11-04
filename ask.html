@@ -1,57 +1,47 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>질문 등록</title>
-  <style>
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans KR", sans-serif; background:#0f1220; color:#fff; }
-    .wrap { max-width: 840px; margin: 8vh auto; padding: 0 20px; }
-    h1 { font-size: 22px; margin-bottom: 14px; opacity:.9 }
-    textarea {
-      width: 100%; min-height: 180px; padding: 16px; border-radius: 14px; border:1px solid #2a2f55;
-      background: #141736; color:#fff; font-size: 18px; line-height: 1.5; resize: vertical; outline: none;
-    }
-    .row { display:flex; gap:10px; margin-top:12px; align-items:center; }
-    button {
-      background:#6c5ce7; color:#fff; border:none; border-radius:12px; padding:12px 18px; font-weight:700; cursor:pointer;
-    }
-    .hint { opacity:.7; font-size:14px }
-    .brand { position: fixed; right: 16px; bottom: 12px; opacity:.9 }
-    .brand img { height: 20px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>질문 등록</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0d1117;--card:#111826;--txt:#e6e8ee;--accent:#7c7cff}
+  *{box-sizing:border-box}html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:Pretendard,system-ui,Apple SD Gothic Neo,sans-serif;display:grid;place-items:center}
+  .wrap{width:min(1200px,92vw);padding:64px 0}
+  h1{font-size:28px;margin:0 0 24px}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px}
+  textarea{width:100%;min-height:260px;border:1px solid #293242;background:#0b1220;color:var(--txt);padding:16px;border-radius:12px;font-size:20px;line-height:1.5;outline:none}
+  .row{display:flex;gap:10px;margin-top:16px;align-items:center}
+  button{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-weight:600;cursor:pointer}
+  small a{color:#9ab; text-decoration:none}
+</style>
 </head>
 <body>
   <div class="wrap">
     <h1>질문 등록</h1>
-    <textarea id="text" placeholder="질문을 입력하고 '등록'을 누르세요."></textarea>
-    <div class="row">
-      <button id="send">등록</button>
-      <div class="hint">사회자 페이지: <code>/mod</code> · 방송화면: <code>/spotlight</code></div>
+    <div class="card">
+      <textarea id="q" placeholder="질문을 입력하고 '등록'을 누르세요."></textarea>
+      <div class="row">
+        <button id="send">등록</button>
+        <small>사회자 페이지: <a href="/mod">/mod</a> · 방송화면: <a href="/spotlight">/spotlight</a></small>
+      </div>
     </div>
   </div>
-
-  <div class="brand"><img src="/static/logo.png" alt="brand" /></div>
-
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-  <script>
-    const socket = io({ transports: ['websocket','polling'] });
-
-    const $text = document.getElementById('text');
-    const $send = document.getElementById('send');
-
-    function submit() {
-      const t = $text.value.trim();
-      if (!t) return;
-      socket.emit('question:add', { text: t });
-      $text.value = '';
-      $text.focus();
-    }
-
-    $send.addEventListener('click', submit);
-    $text.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit();
-    });
-  </script>
+<script>
+document.getElementById('send').onclick = async () => {
+  const text = document.getElementById('q').value.trim();
+  if (!text) return alert('내용이 비어 있습니다.');
+  const r = await fetch('/api/questions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text})
+  }).then(r=>r.json());
+  if(r.ok){ document.getElementById('q').value=''; alert('등록되었습니다.'); }
+  else alert('실패: '+(r.error||'unknown'));
+};
+</script>
 </body>
 </html>
