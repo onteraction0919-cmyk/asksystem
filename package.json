@@ -1,14 +1,19 @@
 {
   "name": "asksystem",
   "version": "1.0.0",
-  "description": "Live Q&A: ask / mod / spotlight",
+  "private": true,
+  "description": "Simple Q&A live system (ask / moderator / spotlight)",
   "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18 <=22"
+  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo \"no build step\""
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^4.19.2",
     "socket.io": "^4.7.5"
   }
 }

@@ -1,221 +1,97 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>사회자 질문 선택</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
   :root{
-    --bg:#0f1020;
-    --panel:#111223;
-    --card:#17192d;
-    --text:#eef2ff;
-    --muted:#a3aed0;
-    --accent:#7c5cff;
-    --accent-2:#5ad0ff;
-    --ok:#20c997;
+    --bg:#0e101a; --card:#171b2e; --text:#e8ecff; --sub:#9aa5d1;
+    --brand:#5b4bff; --ok:#4ad1a8;
   }
   *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo","Noto Sans KR", sans-serif;
-  }
-  header{
-    position:sticky; top:0; z-index:5;
-    backdrop-filter:saturate(140%) blur(8px);
-    background:linear-gradient(90deg, rgba(10,10,24,.75), rgba(10,10,24,.35));
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .bar{
-    max-width:1200px; margin:0 auto; padding:14px 18px;
-    display:flex; align-items:center; gap:16px; justify-content:space-between;
-  }
-  .brand{display:flex; align-items:center; gap:10px}
-  .brand img{height:26px; width:auto; object-fit:contain}
-  .brand .title{font-weight:800; letter-spacing:.2px}
-  .sub{color:var(--muted); font-size:13px}
-
-  .wrap{max-width:1200px; margin:22px auto; padding:0 18px}
-  .controls{
-    display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap;
-  }
-  .pill{
-    border:1px solid rgba(255,255,255,.12); color:var(--muted);
-    background:#0f1125; padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:700;
-  }
-  .pill.active{color:#0b0c14; background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent}
-  .hint{color:var(--muted); font-size:13px; margin-left:auto}
-
-  .grid{
-    display:grid; gap:16px;
-    grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));
-  }
-
-  .card{
-    position:relative;
-    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border:1px solid rgba(255,255,255,.09);
-    border-radius:18px;
-    padding:16px 16px 14px 16px;
-    box-shadow:0 10px 26px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.05);
-    min-height:210px;
-    display:flex; flex-direction:column; gap:12px;
-  }
-  .card.selected{
-    border-color:rgba(124,92,255,.9);
-    box-shadow:0 0 0 3px rgba(124,92,255,.25), 0 18px 36px rgba(92,64,250,.35);
-  }
-
-  .q{
-    flex:1; overflow:auto; padding-right:4px;
-    color:var(--text); font-size:20px; line-height:1.65; letter-spacing:.1px;
-    word-break:keep-all; white-space:pre-wrap;
-  }
-
-  .meta{display:flex; align-items:center; justify-content:space-between; gap:10px}
-  .time{color:var(--muted); font-size:13px}
-  .btn{
-    position:absolute; right:12px; top:12px;
-    border:none; cursor:pointer; padding:9px 12px; border-radius:12px;
-    font-weight:800; color:#0b0c14;
-    background:linear-gradient(135deg, var(--accent), var(--accent-2));
-    box-shadow:0 10px 24px rgba(92,64,250,.35);
-    transition:.15s transform;
-  }
-  .btn:active{transform:translateY(1px)}
-  .badge{
-    font-size:11px; color:#0b0c14; background:linear-gradient(135deg,#1cffb6,#31d2ff);
-    border-radius:999px; padding:6px 10px; font-weight:900;
-  }
-
-  .empty{
-    color:var(--muted); text-align:center; padding:60px 0 80px;
-  }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,pretendard,Arial,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#0b0d16;position:sticky;top:0;z-index:5;border-bottom:1px solid #222740}
+  header h1{font-size:18px;margin:0}
+  header .btns{display:flex;gap:8px}
+  .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .ghost{background:#1a1f37;color:#cbd4ff}
+  .danger{background:#2d2233;color:#ff6d91}
+  main{max-width:1400px;margin:0 auto;padding:18px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media (max-width:1200px){ .grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+  .card{background:var(--card);border:1px solid #20264a;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:180px}
+  .title{font-size:15px;font-weight:700;color:#b9c3ff}
+  .text{font-size:18px;line-height:1.6;white-space:pre-wrap;word-break:keep-all}
+  .meta{font-size:12px;color:var(--sub)}
+  .actions{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .pill{padding:8px 12px;border-radius:999px;border:0;cursor:pointer;font-weight:700}
+  .broad{background:var(--brand);color:#fff}
+  .sel{background:var(--ok);color:#001a14}
+  .def{background:#2a2f48;color:#cfe2ff}
+  .outline{background:transparent;border:1px solid #39406a;color:#cbd4ff}
+  .active{box-shadow:0 0 0 2px #8c82ff inset}
 </style>
 </head>
 <body>
 <header>
-  <div class="bar">
-    <div class="brand">
-      <!-- 로고가 있으면 노출됨 -->
-      <img src="/static/logo.png" alt="" onerror="this.style.display='none'">
-      <div class="title">사회자 질문 선택</div>
-    </div>
-    <div class="sub">가장 좋은 질문을 골라 <span class="badge">방송 표시</span> 해주세요</div>
+  <h1>사회자 질문 선택</h1>
+  <div class="btns">
+    <button class="btn ghost" id="refresh">새로고침</button>
+    <button class="btn danger" id="clearSpot">방송 비우기</button>
   </div>
 </header>
 
-<div class="wrap">
-  <div class="controls">
-    <button class="pill active" data-filter="all">전체</button>
-    <button class="pill" data-filter="pending">대기</button>
-    <button class="pill" data-filter="selected">선택됨</button>
-    <div class="hint">2초마다 자동 갱신됩니다</div>
-  </div>
-
-  <div id="grid" class="grid"></div>
-  <div id="empty" class="empty" style="display:none">들어온 질문이 없습니다.</div>
-</div>
+<main>
+  <div id="count" style="margin:0 0 12px 2px;color:#9aa5d1;font-size:14px;">—</div>
+  <div class="grid" id="list"></div>
+</main>
 
 <script>
-  const grid  = document.getElementById('grid');
-  const empty = document.getElementById('empty');
-  const pills = [...document.querySelectorAll('.pill')];
-  let filter  = 'all';
-  let latest  = [];
+const socket = io();
+const $list = document.getElementById('list');
+const $count = document.getElementById('count');
+let state = { questions:[], currentSpotlight:null };
 
-  pills.forEach(p=>{
-    p.addEventListener('click',()=>{
-      pills.forEach(x=>x.classList.remove('active'));
-      p.classList.add('active');
-      filter = p.dataset.filter;
-      render(latest);
-    });
-  });
+function fmt(ts){ const d=new Date(ts);const z=n=>String(n).padStart(2,'0');return `${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;}
 
-  function fmtTime(ts){
-    try{
-      const d = new Date(ts);
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      const ss = String(d.getSeconds()).padStart(2,'0');
-      return `${hh}:${mm}:${ss}`;
-    }catch(e){ return '' }
-  }
+function render(){
+  $count.textContent = `총 ${state.questions.length}건 / 방송중: ${state.currentSpotlight ? state.currentSpotlight.id : '없음'}`;
+  $list.innerHTML = '';
+  state.questions.forEach(q=>{
+    const el = document.createElement('div');
+    el.className = 'card' + (state.currentSpotlight && state.currentSpotlight.id===q.id ? ' active':'');
 
-  function cardTemplate(q){
-    const sel = q.selected ? ' selected' : '';
-    return `
-      <article class="card${sel}" data-id="${q.id}">
-        <button class="btn" onclick="activate('${q.id}')">방송 표시</button>
-        <div class="q">${escapeHtml(q.text)}</div>
-        <div class="meta">
-          <div class="time">${fmtTime(q.ts || q.time || q.createdAt)}</div>
-          ${q.selected ? '<div class="badge">선택됨</div>' : ''}
-        </div>
-      </article>
+    el.innerHTML = `
+      <div class="title">질문 #${q.id} · <span style="color:#9aa5d1">${fmt(q.ts)}</span></div>
+      <div class="text">${q.text.replace(/</g,'&lt;')}</div>
+      <div class="meta">상태: ${q.status}</div>
+      <div class="actions">
+        <button class="pill broad">방송 표시</button>
+        <button class="pill sel">선택</button>
+        <button class="pill def">대기</button>
+        <button class="pill outline">미방송</button>
+      </div>
     `;
-  }
+    const [bBroad,bSel,bDef,bClear] = el.querySelectorAll('button');
+    bBroad.onclick = ()=> socket.emit('spotlight:set', { id:q.id });
+    bSel.onclick   = ()=> socket.emit('mod:updateStatus', { id:q.id, status:'selected' });
+    bDef.onclick   = ()=> socket.emit('mod:updateStatus', { id:q.id, status:'deferred' });
+    bClear.onclick = ()=> socket.emit('spotlight:clear');
 
-  function escapeHtml(s){
-    return String(s||'')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
-      .replace(/'/g,'&#39;');
-  }
+    $list.appendChild(el);
+  });
+}
 
-  function render(list){
-    // 필터
-    let data = [...list];
-    if(filter==='pending') data = data.filter(x=>!x.selected);
-    if(filter==='selected') data = data.filter(x=>x.selected);
+socket.emit('init:please');
+socket.on('init:data',  d=>{ state=d; render(); });
+socket.on('mod:list:update', qs=>{ state.questions=qs; render(); });
+socket.on('spotlight:update', s=>{ state.currentSpotlight=s; render(); });
 
-    if(!data.length){
-      grid.innerHTML = '';
-      empty.style.display='block';
-      return;
-    }
-    empty.style.display='none';
-    // 최신순 정렬
-    data.sort((a,b)=> (b.ts||b.time||0) - (a.ts||a.time||0));
-    grid.innerHTML = data.map(cardTemplate).join('');
-  }
-
-  // 서버에서 질문 목록 가져오기
-  async function fetchQuestions(){
-    try{
-      const r = await fetch('/api/questions'); // 기존 서버 라우트 그대로 사용
-      if(!r.ok) throw 0;
-      const arr = await r.json();
-      latest = Array.isArray(arr) ? arr : (arr.items || []);
-      render(latest);
-    }catch(e){
-      // 네트워크 오류 시 무시(다음 틱에 재시도)
-    }
-  }
-
-  // 방송 활성화 호출
-  async function activate(id){
-    try{
-      const r = await fetch('/spotlight/active', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ id })
-      });
-      // 성공 시 해당 카드에 selected 표시
-      latest = latest.map(x => x.id===id ? ({...x, selected:true}) : x);
-      render(latest);
-    }catch(e){
-      alert('네트워크 오류로 실패했습니다. 다시 시도해주세요.');
-    }
-  }
-
-  // 2초마다 갱신
-  fetchQuestions();
-  setInterval(fetchQuestions, 2000);
+document.getElementById('refresh').onclick = ()=> socket.emit('init:please');
+document.getElementById('clearSpot').onclick = ()=> socket.emit('spotlight:clear');
 </script>
 </body>
 </html>

@@ -1,50 +1,53 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>방송 질문 표시</title>
-  <style>
-    html,body{height:100%}
-    body{margin:0;background:#ffffff;color:#111;font-family:system-ui,Segoe UI,Apple SD Gothic Neo,Malgun Gothic,sans-serif;}
-    .wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:6vh 6vw;box-sizing:border-box}
-    .box{max-width:1400px;width:100%}
-    .q{font-weight:800;line-height:1.25;
-       font-size:clamp(28px,6vw,72px)}
-    .meta{margin-top:14px;color:#666}
-    .logo{position:fixed;right:24px;bottom:20px;opacity:.9}
-    .logo img{height:26px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>방송 질문</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  :root{ --txt:#111; --sub:#555; }
+  html,body{height:100%}
+  body{
+    margin:0;background:#fff;color:var(--txt);
+    font-family:system-ui,pretendard,Arial,sans-serif;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .wrap{max-width:1400px;padding:6vh 6vw;text-align:left}
+  .q{font-size:min(5.6vw,56px);line-height:1.25;font-weight:800;letter-spacing:-.02em;white-space:pre-wrap;word-break:keep-all}
+  .time{margin-top:18px;font-size:min(2.6vw,26px);color:var(--sub)}
+  .empty{color:#999}
+  .logo{position:fixed;right:26px;bottom:22px;opacity:.9}
+  .logo img{height:min(4.5vw,40px)}
+</style>
 </head>
 <body>
   <div class="wrap">
-    <div class="box">
-      <div class="q" id="q">사회자가 선택한 질문이 여기 크게 표시됩니다.</div>
-      <div class="meta" id="t"></div>
-    </div>
+    <div id="q" class="q empty">방송할 질문이 없습니다.</div>
+    <div id="t" class="time"></div>
   </div>
-  <div class="logo"><img src="/static/logo.png" onerror="this.style.display='none'"></div>
+  <div class="logo"><img src="/static/logo.png" alt="logo"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const elQ = document.getElementById("q");
-    const elT = document.getElementById("t");
-
-    function show(q){
-      if(!q){ elQ.textContent="선택된 질문이 없습니다."; elT.textContent=""; return; }
-      elQ.textContent = q.text;
-      elT.textContent = new Date(q.createdAt).toLocaleString();
+<script>
+  const socket = io();
+  function show(item){
+    const $q = document.getElementById('q');
+    const $t = document.getElementById('t');
+    if(!item){
+      $q.textContent = '방송할 질문이 없습니다.';
+      $q.classList.add('empty');
+      $t.textContent = '';
+    }else{
+      $q.textContent = item.text;
+      $q.classList.remove('empty');
+      const d = new Date(item.ts);
+      const z=n=>String(n).padStart(2,'0');
+      $t.textContent = `${d.getFullYear()}.${z(d.getMonth()+1)}.${z(d.getDate())}  ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
     }
-
-    async function init(){
-      const r = await fetch("/api/active"); const j = await r.json();
-      show(j.item);
-    }
-
-    const socket = io();
-    socket.on("spotlight", show);
-
-    init();
-  </script>
+  }
+  socket.emit('init:please');
+  socket.on('init:data', ({currentSpotlight}) => show(currentSpotlight));
+  socket.on('spotlight:update', show);
+</script>
 </body>
 </html>
