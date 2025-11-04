@@ -1,70 +1,102 @@
-// server.js
-const path = require("path");
-const express = require("express");
-const cors = require("cors");
-const http = require("http");
-const { Server } = require("socket.io");
+// -----------------------------
+// ASK SYSTEM SERVER
+// -----------------------------
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import bodyParser from "body-parser";
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const PORT = process.env.PORT || 10000;
 
-app.use(cors());
-app.use(express.json());
+// 현재 디렉토리 경로 계산
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// -----------------------------
+// 미들웨어 설정
+// -----------------------------
+app.use(bodyParser.json());
+app.use("/static", express.static(path.join(__dirname, "static"))); // 정적 파일 제공
 app.use(express.urlencoded({ extended: true }));
 
-// 정적 파일
-const ROOT = __dirname;
-app.use("/static", express.static(path.join(ROOT, "static")));
+// -----------------------------
+// 메모리 데이터 저장소
+// -----------------------------
+let questions = [];     // { id, text, ts, selected }
+let spotlight = null;   // 현재 방송 중 질문 ID
 
-// 간단 메모리 저장소 (프로덕션에서는 DB 권장)
-let seq = 1;
-let questions = [];      // {id, text, createdAt}
-let activeId = null;
-
-// 라우팅: 페이지
-app.get("/", (_, res) => res.redirect("/ask"));
-app.get("/ask", (_, res) => res.sendFile(path.join(ROOT, "ask.html")));
-app.get("/mod", (_, res) => res.sendFile(path.join(ROOT, "mod.html")));
-app.get("/spotlight/active", (_, res) => res.sendFile(path.join(ROOT, "spotlight.html")));
-
-// 라우팅: API
-app.get("/api/questions", (_, res) => {
-  res.json({ ok: true, items: questions });
+// -----------------------------
+// HTML 라우트
+// -----------------------------
+app.get("/", (req, res) => {
+  res.redirect("/ask");
 });
 
-app.post("/api/ask", (req, res) => {
-  const text = (req.body?.text || "").trim();
-  if (!text) return res.status(400).json({ ok: false, message: "text required" });
-
-  const q = { id: seq++, text, createdAt: Date.now() };
-  questions.unshift(q);        // 최신이 위로 오도록
-  io.emit("new_question", q);  // 실시간 목록 반영
-  res.json({ ok: true, item: q });
+app.get("/ask", (req, res) => {
+  res.sendFile(path.join(__dirname, "ask.html"));
 });
 
-app.post("/api/spotlight", (req, res) => {
-  const id = Number(req.body?.id);
-  const q = questions.find((x) => x.id === id);
-  if (!q) return res.status(404).json({ ok: false, message: "not found" });
-  activeId = id;
-  io.emit("spotlight", q);    // 방송 화면에 반영
-  res.json({ ok: true, item: q });
+app.get("/mod", (req, res) => {
+  res.sendFile(path.join(__dirname, "mod.html"));
 });
 
-app.get("/api/active", (_, res) => {
-  const q = questions.find((x) => x.id === activeId) || null;
-  res.json({ ok: true, item: q });
+app.get("/spotlight/active", (req, res) => {
+  res.sendFile(path.join(__dirname, "spotlight.html"));
 });
 
-// 소켓 연결 로그(선택)
-io.on("connection", (socket) => {
-  // console.log("socket connected:", socket.id);
+// -----------------------------
+// API 라우트
+// -----------------------------
+
+// 질문 등록
+app.post("/api/questions", (req, res) => {
+  const { text } = req.body;
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "내용이 비어 있습니다." });
+  }
+  const q = {
+    id: Date.now().toString(),
+    text: text.trim(),
+    ts: Date.now(),
+    selected: false,
+  };
+  questions.push(q);
+  console.log(`[NEW] ${q.text}`);
+  res.json({ ok: true, q });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log("LiveQ running on port", PORT);
+// 질문 전체 목록 (사회자 화면용)
+app.get("/api/questions", (req, res) => {
+  res.json(questions);
+});
+
+// 방송 중인 질문 변경
+app.post("/spotlight/active", (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "ID 누락" });
+
+  const found = questions.find((q) => q.id === id);
+  if (!found) return res.status(404).json({ error: "해당 질문 없음" });
+
+  questions = questions.map((q) => ({
+    ...q,
+    selected: q.id === id, // 선택한 것만 true
+  }));
+  spotlight = found;
+  console.log(`[SPOTLIGHT] ${found.text}`);
+  res.json({ ok: true, spotlight });
+});
+
+// 현재 방송 중 질문 가져오기
+app.get("/api/spotlight", (req, res) => {
+  res.json(spotlight || {});
+});
+
+// -----------------------------
+// 서버 시작
+// -----------------------------
+app.listen(PORT, () => {
+  console.log(`✅ ASK SYSTEM 서버 실행 중: 포트 ${PORT}`);
+  console.log(`➡  http://localhost:${PORT}/ask`);
 });
