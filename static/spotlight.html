@@ -1,120 +1,50 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>방송 화면</title>
-<style>
-:root{
-  --bg:#ffffff;          /* 전체 배경 */
-  --panel:#eef1f5;        /* 질문 박스 배경 */
-  --text:#121317;         /* 글자색 */
-  --shadow:0 18px 50px rgba(26,29,44,.15);
-}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
-  font-family:Pretendard,ui-sans-serif,system-ui,"Noto Sans KR","Malgun Gothic",sans-serif;}
-.stage{
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:4vmin;
-  position:relative;
-}
-.bubble{
-  max-width:1300px;
-  background:var(--panel);
-  border-radius:22px;
-  padding:4.5vmin 5.5vmin;
-  box-shadow:var(--shadow);
-  border:1px solid rgba(0,0,0,.06);
-}
-.q{
-  text-align:center;
-  font-weight:800;
-  letter-spacing:-.02em;
-  line-height:1.3;
-  font-size:clamp(22px,4.2vmin,44px);
-}
-
-/* 로고 스타일 */
-.brand{
-  position:fixed;
-  right:24px;
-  bottom:20px;
-  z-index:50;
-  pointer-events:none;
-}
-.brand__img{
-  height:28px;
-  width:auto;
-  image-rendering:-webkit-optimize-contrast;
-  image-rendering:crisp-edges;
-  -ms-interpolation-mode:nearest-neighbor;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>방송 출력</title>
+  <style>
+    :root{
+      --bg:#ffffff; --text:#0c1222; --card:#eef1f6; --shadow:0 18px 40px rgba(8,14,35,.10);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      font-family:system-ui,Pretendard,Apple SD Gothic Neo,Arial,sans-serif;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .box{
+      width:min(1200px,88vw);
+      background:var(--card); border-radius:22px; padding:36px 40px;
+      box-shadow:var(--shadow);
+    }
+    .q{
+      font-weight:800; font-size:min(3.2vw,40px); line-height:1.35;
+      letter-spacing:-.02em; text-align:center; white-space:pre-wrap;
+    }
+    .empty{color:#5e6a81;font-size:min(2.2vw,26px);text-align:center}
+  </style>
 </head>
 <body>
-<div class="stage">
-  <div class="bubble">
-    <div id="q" class="q">방송할 질문을 선택해 주세요.</div>
-  </div>
-</div>
+  <div id="root"></div>
 
-<!-- ✅ 로고 깨짐 방지: SVG → img/폴더 자동 폴백 → PNG까지 백업 -->
-<picture class="brand">
-  <!-- 1차 시도: 기본 위치 -->
-  <source srcset="/static/logo-sanofi.svg" type="image/svg+xml" />
-  <!-- 2차 시도: img 폴더 -->
-  <source srcset="/static/img/logo-sanofi.svg" type="image/svg+xml" />
-  <!-- 3차 시도: PNG 폴백 -->
-  <source srcset="/static/img/logo-sanofi@2x.png 2x, /static/img/logo-sanofi.png 1x" type="image/png" />
-  <img
-    id="brandImg"
-    src="/static/logo-sanofi.svg"
-    alt="Sanofi"
-    class="brand__img"
-    decoding="async"
-    loading="eager"
-    onerror="
-      (function(img){
-        if(!img.dataset.triedImg){
-          img.dataset.triedImg=1;
-          img.src='/static/img/logo-sanofi.svg';
-        }else{
-          img.src='/static/img/logo-sanofi.png';
-          img.srcset='/static/img/logo-sanofi@2x.png 2x, /static/img/logo-sanofi.png 1x';
-        }
-      })(this);
-    "
-  />
-</picture>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const ioClient = io();
+    const root = document.getElementById('root');
 
-<script>
-const qEl=document.getElementById("q");
-let questions=[],activeId=null;
+    const html = (q) => q
+      ? `<div class="box"><div class="q">${q.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div></div>`
+      : `<div class="empty">방송 중인 질문이 없습니다.</div>`;
 
-function render(){
-  if(!activeId){
-    qEl.textContent="방송할 질문을 선택해 주세요.";
-    return;
-  }
-  const q=questions.find(x=>x.id===activeId);
-  qEl.textContent=q?q.text:"방송할 질문을 선택해 주세요.";
-}
-
-// SSE로 실시간 연결
-const es=new EventSource("/sse");
-es.addEventListener("init",e=>{
-  const d=JSON.parse(e.data);
-  questions=d.questions;activeId=d.activeId;render();
-});
-es.addEventListener("questions",e=>{
-  questions=JSON.parse(e.data);render();
-});
-es.addEventListener("spotlight",e=>{
-  activeId=JSON.parse(e.data).activeId;render();
-});
-</script>
+    async function fetchCurrent(){
+      const r = await fetch('/api/spotlight').then(r=>r.json());
+      root.innerHTML = html(r.data);
+    }
+    ioClient.on('spotlight:update', data => root.innerHTML = html(data));
+    fetchCurrent();
+  </script>
 </body>
 </html>

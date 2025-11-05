@@ -1,78 +1,82 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>사회자 패널</title>
-<style>
-:root{
-  --bg:#0b1020;--text:#e7eeff;--muted:#9db1d1bb;
-  --card:#0e1430;--line:#25345d;--accent:#7f89ff;
-  --good:#00d3a7;--danger:#ff5470;
-}
-body{margin:0;background:var(--bg);color:var(--text);
-  font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;}
-.wrap{max-width:1280px;margin:36px auto;padding:0 20px}
-h1{margin:0 0 18px}
-.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-.btn-a{background:var(--accent);color:#fff}
-.btn-g{background:var(--good);color:#03231d}
-.btn-d{background:transparent;color:var(--danger);border:1px solid #452737}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 14px}
-.active{outline:2px solid var(--good)}
-.txt{white-space:pre-wrap;line-height:1.5}
-.row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>사회자 질문 선택</title>
+  <style>
+    :root{
+      --bg:#0e1320; --ink:#eaf0ff; --muted:#a1acd6; --card:#12182b;
+      --brand:#7a68ff; --danger:#ff5d7a;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Pretendard,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:48px auto;padding:0 20px}
+    h1{margin:0 0 16px}
+    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+    .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:700}
+    .btn.muted{background:#2b3350}
+    .btn.danger{background:var(--danger)}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .card{
+      background:var(--card);border:1px solid #1f2942;border-radius:14px;padding:14px 14px;display:flex;gap:10px;align-items:flex-start
+    }
+    .q{flex:1;white-space:pre-wrap;line-height:1.55}
+    .meta{color:var(--muted);font-size:12px;margin-top:6px}
+    .actions{display:flex;gap:8px}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="bar">
+  <div class="wrap">
     <h1>사회자 질문 선택</h1>
-    <div>
-      <a href="/ask" class="btn">질문 등록</a>
-      <a href="/spotlight" class="btn">방송 화면</a>
-      <button id="clear" class="btn btn-d">전체삭제</button>
+    <div class="toolbar">
+      <button class="btn muted" onclick="spotlightClear()">방송 해제</button>
+      <div class="meta">방송화면: <b>/spotlight</b></div>
     </div>
+    <div id="list" class="grid"></div>
   </div>
-  <div id="grid" class="grid"></div>
-</div>
 
-<script>
-const grid=document.getElementById("grid");let activeId=null;
-function render(qs){
-  grid.innerHTML=qs.map(q=>{
-    const d=new Date(q.createdAt);
-    const t=d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-    const act=q.id===activeId?"active":"";
-    return `<div class="card ${act}" data-id="${q.id}">
-      <div class="txt">${escapeHTML(q.text)}</div>
-      <div class="row">
-        <small>${t}</small>
-        <div>
-          <button class='btn btn-g' data-show='${q.id}'>방송표시</button>
-          <button class='btn btn-d' data-del='${q.id}'>삭제</button>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const ioClient = io();
+    const elList = document.getElementById('list');
+
+    const fmt = ts => {
+      const d = new Date(ts);
+      const z=n=>String(n).padStart(2,'0');
+      return `${z(d.getMonth()+1)}/${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+    };
+
+    function render(list){
+      elList.innerHTML = list.map(q => `
+        <div class="card">
+          <div class="q">
+            ${q.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+            <div class="meta">${fmt(q.createdAt)}</div>
+          </div>
+          <div class="actions">
+            <button class="btn" onclick="spotlight('${q.id}')">방송 표시</button>
+            <button class="btn danger" onclick="delQ('${q.id}')">삭제</button>
+          </div>
         </div>
-      </div></div>`;
-  }).join("")||"<div class='muted'>질문이 없습니다.</div>";
-}
-grid.onclick=async(e)=>{
-  const idS=e.target.dataset.show,idD=e.target.dataset.del;
-  if(idS)await fetch(`/api/spotlight/${idS}`,{method:"POST"});
-  if(idD&&confirm("삭제할까요?"))await fetch(`/api/questions/${idD}`,{method:"DELETE"});
-}
-document.getElementById("clear").onclick=async()=>{
-  if(confirm("전체 삭제할까요?"))await fetch("/api/questions",{method:"DELETE"});
-}
-const es=new EventSource("/sse");
-es.addEventListener("init",e=>{const d=JSON.parse(e.data);activeId=d.activeId;render(d.questions);});
-es.addEventListener("questions",e=>render(JSON.parse(e.data)));
-es.addEventListener("spotlight",e=>{
-  activeId=JSON.parse(e.data).activeId;
-  document.querySelectorAll(".card").forEach(el=>el.classList.toggle("active",el.dataset.id===activeId));
-});
-function escapeHTML(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]))}
-</script>
+      `).join('') || '<div class="meta">등록된 질문이 없습니다.</div>';
+    }
+
+    async function spotlight(id){
+      await fetch('/api/spotlight', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id })
+      });
+    }
+    async function spotlightClear(){
+      await fetch('/api/spotlight/clear', { method:'POST' });
+    }
+    async function delQ(id){
+      if(!confirm('삭제할까요?')) return;
+      await fetch(`/api/questions/${id}`, { method:'DELETE' });
+    }
+
+    ioClient.on('questions:update', render);
+  </script>
 </body>
 </html>
