@@ -2,176 +2,117 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>방송 출력</title>
+  <title>방송 질문 자막</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* 색/스타일 기본값 (URL 파라미터로 덮어쓰기 가능) */
-      --bg-color: #0b1020;                /* 전체 배경 */
-      --box-bg: rgba(255,255,255,0.88);   /* 박스 배경(반투명) */
-      --box-border: rgba(0,0,0,0.08);     /* 박스 테두리 */
-      --text-color: #111;                 /* 글자 색 */
-      --shadow: 0 10px 40px rgba(0,0,0,0.25);
-      --radius: 22px;
-      --box-max-width: 1600px;            /* 박스 최대 너비 */
-      --box-padding-v: 48px;              /* 박스 상하 패딩 */
-      --box-padding-h: 56px;              /* 박스 좌우 패딩 */
-      --logo-size: 110px;                 /* 우하단 로고 너비 */
-      --safe-margin: 5vw;                 /* 화면 가장자리 여백 */
+      /* 배경 / 카드 색상 */
+      --page-bg: #ffffff;           /* 전체 배경: 흰색 */
+      --card-bg: #eef0f3;           /* 박스: 아주 연한 회색 */
+      --text:    #171a1f;           /* 본문 글자색 */
+      --muted:   #7b8495;
+      --radius:  28px;
+
+      /* 기본 글자 크기: 너무 커지지 않도록 상한을 둠 */
+      --fs: clamp(22px, 2.2vw, 38px);   /* 필요 시 URL로 override 가능: ?fs=34px 또는 ?fs=2vw */
+      --lh: 1.35;                       /* 줄간격 */
+      --padY: clamp(22px, 3.2vw, 48px); /* 상하 패딩 */
+      --padX: clamp(26px, 4.2vw, 64px); /* 좌우 패딩 */
+      --maxW: 1200px;                   /* 박스 최대 너비 */
     }
 
     html, body {
       height: 100%;
-    }
-    body {
       margin: 0;
-      background: var(--bg-color);
-      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", Dotum, sans-serif;
-      color: var(--text-color);
-      overflow: hidden;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Malgun Gothic", Dotum, sans-serif;
     }
 
     .stage {
-      position: fixed;
-      inset: 0;
+      min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: var(--safe-margin);
+      padding: 6vh 4vw;
     }
 
-    /* 중앙 큰 박스 */
-    .caption-box {
-      width: 100%;
-      max-width: var(--box-max-width);
-      background: var(--box-bg);
-      border: 1px solid var(--box-border);
+    .bubble {
+      width: min(86vw, var(--maxW));
+      background: var(--card-bg);
       border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: var(--box-padding-v) var(--box-padding-h);
+      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 10px 36px rgba(0,0,0,0.08);
+      padding: var(--padY) var(--padX);
     }
 
-    /* 텍스트가 박스 내부에서 자동 줄바꿈 & 가운데 정렬 */
-    .caption {
-      margin: 0;
-      text-align: center;      /* 중앙 정렬 */
-      line-height: 1.22;
+    .q {
+      font-size: var(--fs);
+      line-height: var(--lh);
       font-weight: 800;
-      word-break: keep-all;    /* 한국어 단어 단위 유지 */
-      overflow-wrap: anywhere; /* 너무 긴 영어 단어도 깨짐 방지 */
-      /* 폰트 크기는 JS에서 자동 조정 */
+      text-align: center;
+      word-break: keep-all;
+      white-space: pre-wrap;
     }
 
-    /* 우하단 로고 */
+    /* 로고(오른쪽 하단). ?logo=0로 숨김 가능 */
     .logo {
       position: fixed;
-      right: calc(var(--safe-margin) - 6px);
-      bottom: calc(var(--safe-margin) - 2px);
-      width: var(--logo-size);
-      opacity: .92;
+      right: 26px;
+      bottom: 20px;
+      opacity: .9;
       user-select: none;
-      -webkit-user-drag: none;
+      pointer-events: none;
+      filter: grayscale(0);
     }
+    .logo img { height: 28px; }
 
-    /* 박스 상/중/하 위치 바꾸고 싶을 때(파라미터 boxpos로 제어) */
-    .align-top    { align-items: start; }
-    .align-center { align-items: center; }
-    .align-bottom { align-items: end; }
+    /* 매우 작은 화면 보정 */
+    @media (max-width: 600px){
+      :root { --fs: clamp(18px, 4.2vw, 26px); }
+      .logo img { height: 22px; }
+    }
   </style>
 </head>
 <body>
-  <div class="stage align-center" id="stage">
-    <div class="caption-box">
-      <div id="caption" class="caption">
-        …
-      </div>
-    </div>
+  <main class="stage">
+    <section class="bubble">
+      <div id="q" class="q">방송 대기중입니다…</div>
+    </section>
+  </main>
+
+  <div class="logo" id="logo">
+    <!-- 로고 파일 경로를 자신의 파일로 교체 가능 (static 폴더에 두면 /static/… 경로 사용) -->
+    <img src="/static/logo-sanofi.svg" alt="logo" />
   </div>
 
-  <!-- 우하단 로고(원하면 /static/logo.png 교체) -->
-  <img class="logo" id="logo" src="/static/logo.png" alt="logo" />
-
   <script>
-    /******************************************************************
-     * 파라미터로 즉석 스타일 조정
-     * 예:  /spotlight?boxbg=ffffffdd&text=#111&boxpos=top&maxw=1400
-     ******************************************************************/
-    const params = new URLSearchParams(location.search);
+    // ------- 옵션: URL 파라미터로 글자크기/로고/여백 미세 조정 -------
+    const p = new URLSearchParams(location.search);
+    // 글자 크기 강제 지정 (예: ?fs=34px 또는 ?fs=2.4vw)
+    if (p.get('fs')) document.documentElement.style.setProperty('--fs', p.get('fs'));
+    // 박스 최대너비 (예: ?max=1000)
+    if (p.get('max')) document.documentElement.style.setProperty('--maxW', p.get('max') + 'px');
+    // 로고 숨김 (예: ?logo=0)
+    if (p.get('logo') === '0') document.getElementById('logo').style.display = 'none';
+    // 상/하/좌/우 패딩 (예: ?py=40&px=60)
+    if (p.get('py')) document.documentElement.style.setProperty('--padY', p.get('py') + 'px');
+    if (p.get('px')) document.documentElement.style.setProperty('--padX', p.get('px') + 'px');
 
-    const setVar = (name, val) => {
-      if (val != null && val !== "") {
-        // hex 짧은 표현 처리
-        if (/^[0-9a-f]{6,8}$/i.test(val)) val = '#' + val;
-        document.documentElement.style.setProperty(name, val);
-      }
-    };
-
-    setVar('--box-max-width', params.get('maxw') ? params.get('maxw')+'px' : null);
-    setVar('--box-bg', params.get('boxbg'));
-    setVar('--text-color', params.get('text'));
-    setVar('--box-border', params.get('border'));
-    setVar('--bg-color', params.get('bg'));
-    setVar('--logo-size', params.get('logosize') ? params.get('logosize')+'px' : null);
-    setVar('--safe-margin', params.get('margin') ? params.get('margin') : null);
-
-    // 박스 위치
-    const boxpos = params.get('boxpos'); // top | center | bottom
-    if (boxpos) {
-      const stage = document.getElementById('stage');
-      stage.classList.remove('align-top','align-center','align-bottom');
-      stage.classList.add(boxpos === 'top' ? 'align-top' : boxpos === 'bottom' ? 'align-bottom' : 'align-center');
-    }
-
-    // 로고 숨기기
-    if (params.get('logo') === 'off') {
-      document.getElementById('logo').style.display = 'none';
-    }
-
-    /******************************************************************
-     * 폰트 자동 맞춤: 박스 안에 꽉차되 줄바꿈/오버플로우 없이 보이게
-     ******************************************************************/
-    const captionEl = document.getElementById('caption');
-    const boxEl = captionEl.parentElement;
-    const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
-
-    function fitFont() {
-      // 기본 시작 크기 (해상도에 비례)
-      let font = Math.round(window.innerWidth / 26); // 대략적인 시작점
-      font = clamp(font, 26, 128);                  // 최소/최대 제한
-      captionEl.style.fontSize = font + 'px';
-
-      // 줄여가며 박스에 맞추기
-      const maxH = boxEl.clientHeight - 8; // 여유
-      const maxW = boxEl.clientWidth - 8;
-      let guard = 120; // 무한루프 방지
-      while (guard-- > 0) {
-        const { scrollHeight, scrollWidth } = captionEl;
-        if (scrollHeight <= maxH && scrollWidth <= maxW) break;
-        font -= 2;
-        if (font <= 18) break;
-        captionEl.style.fontSize = font + 'px';
-      }
-    }
-
-    window.addEventListener('resize', fitFont);
-
-    /******************************************************************
-     * 현재 방송중(Active) 질문 폴링
-     ******************************************************************/
-    async function fetchActive() {
+    // ------- 데이터 폴링: 현재 활성화된 질문을 가져와 표시 -------
+    const $q = document.getElementById('q');
+    async function loadActive() {
       try {
         const r = await fetch('/api/active', { cache: 'no-store' });
         const j = await r.json();
-        const text = j?.active?.text || '';
-        captionEl.textContent = text || '방송 대기 중…';
-        fitFont();
+        $q.textContent = j?.text ? j.text : '방송 대기중입니다…';
       } catch (e) {
-        captionEl.textContent = '네트워크 오류';
+        $q.textContent = '네트워크 오류…';
       }
     }
 
-    setInterval(fetchActive, 1000);
-    fetchActive();
+    loadActive();
+    setInterval(loadActive, 1500); // 1.5초마다 갱신
   </script>
 </body>
 </html>
