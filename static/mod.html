@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>사회자 질문 선택</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f1420; --ink:#e9eef7; --card:#141a2a; --accent:#7b8cff; --line:#26304a;}
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:Pretendard, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--ink);}
+  .top{display:flex; justify-content:space-between; align-items:center; padding:20px 24px;}
+  .actions{display:flex; gap:10px;}
+  .btn{background:var(--accent); color:#fff; border:none; border-radius:12px; padding:9px 14px; cursor:pointer;}
+  .btn.ghost{background:#2a324a;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px; padding:24px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px;}
+  .tx{line-height:1.6; font-size:17px;}
+  .meta{color:#9aa5bd; font-size:13px;}
+  .row{display:flex; gap:8px;}
+  .ok{background:#54d17a;}
+  .danger{background:#ef5b7d;}
+  .badge{background:#2b3550; color:#b9c4ff; font-size:12px; padding:3px 8px; border-radius:8px;}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="badge">사회자 페이지</div>
+    <div class="actions">
+      <button class="btn ghost" id="refresh">새로고침</button>
+      <button class="btn danger" id="clear">질문 전체삭제</button>
+      <button class="btn" id="clearActive">방송 해제</button>
+      <a class="btn ghost" href="/spotlight" target="_blank">방송화면 열기</a>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  const grid = document.getElementById('grid');
+  const refresh = document.getElementById('refresh');
+  const clearAll = document.getElementById('clear');
+  const clearActive = document.getElementById('clearActive');
+
+  let ACTIVE = null;
+
+  function render(questions){
+    grid.innerHTML = questions.map(q => `
+      <div class="card">
+        <div class="tx">${escapeHTML(q.text)}</div>
+        <div class="meta">${q.ts}</div>
+        <div class="row">
+          <button class="btn ok" data-act="go" data-id="${q.id}">방송 표시</button>
+          <button class="btn danger" data-act="del" data-id="${q.id}">삭제</button>
+          ${ACTIVE===q.id ? '<span class="badge">방송중</span>' : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHTML(s){return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+
+  grid.addEventListener('click', (e)=>{
+    const id = e.target.dataset.id;
+    const act = e.target.dataset.act;
+    if(!id || !act) return;
+    if(act==='go'){ socket.emit('spotlight:set', id); }
+    if(act==='del'){ socket.emit('question:delete', id); }
+  });
+
+  refresh.onclick = ()=> socket.emit('noop', Date.now());
+  clearAll.onclick = ()=> socket.emit('questions:clear');
+  clearActive.onclick = ()=> socket.emit('spotlight:set', null);
+
+  socket.on('init', ({questions, activeId}) => { ACTIVE = activeId; render(questions); });
+  socket.on('questions:update', (qs) => render(qs));
+  socket.on('spotlight:update', ({activeId}) => { ACTIVE = activeId; });
+</script>
+</body>
+</html>
