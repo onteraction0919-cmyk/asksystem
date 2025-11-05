@@ -1,113 +1,133 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>질문 등록</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root{
-      --bg:#0e1320; --card:#12182b; --ink:#eaf0ff; --muted:#95a0c7;
-      --brand:#6655ff; --brand-ink:#fff; --ring:rgba(102,85,255,.35);
+    :root {
+      --bg: #0f1220;
+      --panel: #151a2c;
+      --muted: #8aa0c5;
+      --acc: #7868ff;
+      --text: #eaf0ff;
+      --border: #222844;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; background:var(--bg); color:var(--ink);
-      font-family:system-ui,Segoe UI,Apple SD Gothic Neo,Pretendard,Apple Color Emoji,Arial,sans-serif;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    * { box-sizing: border-box }
+    body {
+      margin: 0; font-family: "Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
     }
-    .wrap{max-width:960px;margin:60px auto;padding:0 20px}
-    h1{font-size:28px;margin:0 0 16px}
-    .card{background:var(--card);border-radius:16px;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-    textarea{
-      width:100%;min-height:180px;background:#0b1020;border:1px solid #1f2942;color:var(--ink);
-      border-radius:12px;padding:16px;font-size:18px;line-height:1.6;outline:none;
+    .wrap { max-width: 980px; margin: 48px auto; padding: 0 20px; }
+    h1 { margin: 0 0 20px; font-size: clamp(20px, 2.6vw, 28px); }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 20px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.35);
     }
-    textarea:focus{border-color:var(--brand);box-shadow:0 0 0 6px var(--ring)}
-    .row{display:flex;gap:12px;align-items:center;margin-top:14px}
-    .btn{
-      background:var(--brand);color:var(--brand-ink);border:0;padding:10px 18px;border-radius:12px;
-      font-weight:700;cursor:pointer;
+    textarea {
+      width: 100%; height: 260px; resize: vertical; padding: 18px 16px;
+      background: #0f1427; color: var(--text); border: 1px solid var(--border);
+      border-radius: 12px; line-height: 1.6; font-size: 18px;
     }
-    .muted{color:var(--muted);font-size:14px}
-    .list{margin-top:28px;display:grid;gap:12px}
-    .item{background:#0b1020;border:1px solid #1f2942;border-radius:12px;padding:14px 14px;display:flex;gap:10px;align-items:flex-start}
-    .item .txt{flex:1;white-space:pre-wrap;line-height:1.5}
-    .item .small{color:#8ea1c0;font-size:12px;margin-top:6px}
-    .xbtn{background:#2b3350;color:#c8d0f8;border:0;border-radius:10px;padding:8px 12px;cursor:pointer}
+    .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; }
+    .btn {
+      appearance: none; border: 0; border-radius: 10px; padding: 10px 16px;
+      background: var(--acc); color: white; font-weight: 700; cursor: pointer;
+      transition: transform .06s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .tip { color: var(--muted); font-size: 14px }
+    .links { margin-top: 8px; color: var(--muted); font-size: 14px }
+    .links a { color: #a5b9ff; text-decoration: none; margin-right: 12px }
+    .list { margin-top: 28px; }
+    .item {
+      border: 1px solid var(--border); background: #0f1427; border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 10px;
+      display: grid; grid-template-columns: 1fr auto; gap: 8px;
+    }
+    .t { margin: 0; white-space: pre-wrap; line-height: 1.5 }
+    .actions { display: flex; gap: 6px }
+    .btn-xs {
+      padding: 6px 10px; border-radius: 8px; background: #34406a; color: #e9eeff;
+      border: 1px solid #3b4772; cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>질문 등록</h1>
-    <div class="card">
-      <textarea id="t" placeholder="질문을 입력하고 ‘등록’을 누르세요."></textarea>
+    <div class="panel">
+      <textarea id="ta" placeholder="질문을 입력하고 ‘등록’을 누르세요.&#10;가능하면 한 문장으로 간결하게 써 주세요."></textarea>
       <div class="row">
-        <button id="add" class="btn">등록</button>
-        <div class="muted">사회자: <b>/mod</b> · 방송화면: <b>/spotlight</b></div>
+        <button class="btn" id="submit">등록</button>
+        <span class="tip">사회자 페이지: <b>/mod</b> · 방송화면: <b>/spotlight</b></span>
+      </div>
+
+      <div class="links">
+        <a href="/mod" target="_blank">사회자 페이지 열기</a>
+        <a href="/spotlight" target="_blank">방송화면 열기</a>
       </div>
     </div>
 
-    <div class="list" id="mine"></div>
+    <div class="list" id="list"></div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const elT = document.getElementById('t');
-    const elAdd = document.getElementById('add');
-    const elMine = document.getElementById('mine');
-    const ioClient = io();
+    const ta = document.getElementById("ta");
+    const listEl = document.getElementById("list");
+    const socket = io();
 
-    // 서버 전체 목록에서 "내가 방금 보낸 것"만 간단히 보여주기 위한 메모
-    const myIds = new Set();
-
-    function fmt(ts){
-      const d = new Date(ts);
-      const z=(n)=>String(n).padStart(2,'0');
-      return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+    async function fetchList() {
+      const res = await fetch("/api/questions");
+      const data = await res.json();
+      renderList(data);
     }
 
-    function renderMine(list){
-      // 내가 등록한 것만
-      const mine = list.filter(q => myIds.has(q.id));
-      elMine.innerHTML = mine.map(q => `
-        <div class="item">
-          <div class="txt">
-            <div>${q.text.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</div>
-            <div class="small">${fmt(q.createdAt)}</div>
-          </div>
-          <button class="xbtn" onclick="del('${q.id}')">삭제</button>
-        </div>
-      `).join('') || '';
+    function renderList(arr) {
+      listEl.innerHTML = "";
+      if (!arr.length) return;
+      arr.forEach(q => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <p class="t">${escapeHtml(q.text)}</p>
+          <div class="actions">
+            <button class="btn-xs" onclick="del(${q.id})">삭제</button>
+          </div>`;
+        listEl.appendChild(el);
+      });
     }
 
-    async function add(){
-      const text = elT.value.trim();
-      if(!text) return;
-      const r = await fetch('/api/questions', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text })
-      }).then(r=>r.json());
-      if(r.ok){
-        myIds.add(r.data.id);
-        elT.value='';
-      } else {
-        alert(r.message || '등록 실패');
-      }
+    document.getElementById("submit").onclick = async () => {
+      const text = ta.value.trim();
+      if (!text) return alert("내용을 입력해 주세요.");
+      await fetch("/api/questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      ta.value = "";
+      ta.focus();
+      fetchList();
+    };
+
+    window.del = async (id) => {
+      await fetch(`/api/questions/${id}`, { method: "DELETE" });
+      fetchList();
+    };
+
+    socket.on("list:update", fetchList);
+    fetchList();
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, m => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[m]));
     }
-
-    async function del(id){
-      if(!confirm('삭제할까요?')) return;
-      const r = await fetch(`/api/questions/${id}`, { method:'DELETE' }).then(r=>r.json());
-      if(!r.ok) alert('삭제 실패');
-      else myIds.delete(id);
-    }
-
-    elAdd.addEventListener('click', add);
-    elT.addEventListener('keydown', e => {
-      if((e.metaKey||e.ctrlKey) && e.key==='Enter') add();
-    });
-
-    ioClient.on('questions:update', renderMine);
   </script>
 </body>
 </html>

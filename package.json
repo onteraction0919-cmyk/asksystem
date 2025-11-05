@@ -1,13 +1,15 @@
 {
   "name": "asksystem",
   "version": "1.0.0",
+  "description": "Live Q&A system with moderator and spotlight display",
   "private": true,
   "type": "commonjs",
-  "engines": {
-    "node": ">=18"
-  },
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "express": "^4.19.2",
