@@ -1,74 +1,51 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>방송 출력</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>방송 화면</title>
 <style>
-  :root{
-    --bg:#ffffff;           /* 전체 화면 배경 (화이트) */
-    --panel:#eef1f4;        /* 박스 배경 (연회색) */
-    --ink:#101218;          /* 글자 (진한 검정) */
-    --shadow:rgba(0,0,0,.08);
-  }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:Pretendard, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  }
-  .stage{
-    height:100%; width:100%; display:flex; align-items:center; justify-content:center; position:relative;
-    padding:48px;
-  }
-  .card{
-    max-width: min(1400px, 90vw);
-    border-radius: 28px;
-    background: var(--panel);
-    box-shadow: 0 20px 60px var(--shadow), 0 2px 8px rgba(0,0,0,.05) inset;
-    padding: clamp(18px, 4.5vw, 40px);
-    border: 1px solid rgba(0,0,0,.06);
-  }
-  .tx{
-    font-weight:700;
-    line-height:1.3;
-    text-align:center;
-    font-size: clamp(22px, 3.3vw, 46px); /* 너무 커지지 않도록 제한 */
-  }
-  .logo{
-    position:absolute; right:28px; bottom:22px; opacity:.7;
-  }
-  .logo img{ height:34px; display:block; }
-  .muted{opacity:.35; font-weight:600;}
+:root{
+  --bg:#ffffff;
+  --paper:#eef1f5;
+  --text:#121317;
+  --shadow:0 18px 50px rgba(26,29,44,.15);
+}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font-family:Pretendard,ui-sans-serif,system-ui,"Noto Sans KR","Malgun Gothic",sans-serif;}
+.stage{height:100%;display:flex;align-items:center;justify-content:center;padding:4vmin;}
+.bubble{max-width:1300px;background:var(--paper);border-radius:22px;
+  padding:4.5vmin 5.5vmin;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,.06);}
+.q{text-align:center;font-weight:800;letter-spacing:-.02em;line-height:1.28;
+  font-size:clamp(22px,4.2vmin,44px);}
+.brand{position:fixed;right:24px;bottom:20px;pointer-events:none;}
+.brand__img{height:28px;width:auto;image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges;}
 </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="card">
-      <div id="text" class="tx muted">대기 중… 사회자가 질문을 선택하면 여기에 표시됩니다.</div>
-    </div>
-    <!-- 로고 경로는 프로젝트에 맞게 변경 가능 -->
-    <div class="logo"><img src="/static/logo-sanofi.svg" alt="sanofi"></div>
+<div class="stage">
+  <div class="bubble">
+    <div id="q" class="q">방송할 질문을 선택해 주세요.</div>
   </div>
+</div>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<picture class="brand">
+  <source srcset="/static/img/logo-sanofi.svg" type="image/svg+xml" />
+  <source srcset="/static/img/logo-sanofi@2x.png 2x, /static/img/logo-sanofi.png 1x" type="image/png" />
+  <img src="/static/img/logo-sanofi.png" alt="sanofi" class="brand__img" decoding="async" loading="eager" />
+</picture>
+
 <script>
-  const socket = io();
-  const text = document.getElementById('text');
-
-  function escapeHTML(s){return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
-
-  function setActive(q){
-    if(!q){ text.classList.add('muted'); text.innerHTML = '대기 중… 사회자가 질문을 선택하면 여기에 표시됩니다.'; return; }
-    text.classList.remove('muted');
-    text.innerHTML = escapeHTML(q.text).replace(/\n/g,'<br>');
-  }
-
-  socket.on('init', ({active}) => setActive(active));
-  socket.on('spotlight:update', ({active}) => setActive(active));
+const qEl=document.getElementById("q");let questions=[],activeId=null;
+function render(){
+  if(!activeId){qEl.textContent="방송할 질문을 선택해 주세요.";return;}
+  const q=questions.find(x=>x.id===activeId);
+  qEl.textContent=q?q.text:"방송할 질문을 선택해 주세요.";
+}
+const es=new EventSource("/sse");
+es.addEventListener("init",e=>{const d=JSON.parse(e.data);questions=d.questions;activeId=d.activeId;render();});
+es.addEventListener("questions",e=>{questions=JSON.parse(e.data);render();});
+es.addEventListener("spotlight",e=>{activeId=JSON.parse(e.data).activeId;render();});
 </script>
 </body>
 </html>

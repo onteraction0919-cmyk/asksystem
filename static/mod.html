@@ -1,84 +1,78 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>사회자 질문 선택</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@500;700&display=swap" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>사회자 패널</title>
 <style>
-  :root{--bg:#0f1420; --ink:#e9eef7; --card:#141a2a; --accent:#7b8cff; --line:#26304a;}
-  *{box-sizing:border-box;}
-  body{margin:0; font-family:Pretendard, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--ink);}
-  .top{display:flex; justify-content:space-between; align-items:center; padding:20px 24px;}
-  .actions{display:flex; gap:10px;}
-  .btn{background:var(--accent); color:#fff; border:none; border-radius:12px; padding:9px 14px; cursor:pointer;}
-  .btn.ghost{background:#2a324a;}
-  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px; padding:24px;}
-  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px;}
-  .tx{line-height:1.6; font-size:17px;}
-  .meta{color:#9aa5bd; font-size:13px;}
-  .row{display:flex; gap:8px;}
-  .ok{background:#54d17a;}
-  .danger{background:#ef5b7d;}
-  .badge{background:#2b3550; color:#b9c4ff; font-size:12px; padding:3px 8px; border-radius:8px;}
+:root{
+  --bg:#0b1020;--text:#e7eeff;--muted:#9db1d1bb;
+  --card:#0e1430;--line:#25345d;--accent:#7f89ff;
+  --good:#00d3a7;--danger:#ff5470;
+}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;}
+.wrap{max-width:1280px;margin:36px auto;padding:0 20px}
+h1{margin:0 0 18px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn-a{background:var(--accent);color:#fff}
+.btn-g{background:var(--good);color:#03231d}
+.btn-d{background:transparent;color:var(--danger);border:1px solid #452737}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 14px}
+.active{outline:2px solid var(--good)}
+.txt{white-space:pre-wrap;line-height:1.5}
+.row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 </style>
 </head>
 <body>
-  <div class="top">
-    <div class="badge">사회자 페이지</div>
-    <div class="actions">
-      <button class="btn ghost" id="refresh">새로고침</button>
-      <button class="btn danger" id="clear">질문 전체삭제</button>
-      <button class="btn" id="clearActive">방송 해제</button>
-      <a class="btn ghost" href="/spotlight" target="_blank">방송화면 열기</a>
+<div class="wrap">
+  <div class="bar">
+    <h1>사회자 질문 선택</h1>
+    <div>
+      <a href="/ask" class="btn">질문 등록</a>
+      <a href="/spotlight" class="btn">방송 화면</a>
+      <button id="clear" class="btn btn-d">전체삭제</button>
     </div>
   </div>
+  <div id="grid" class="grid"></div>
+</div>
 
-  <div class="grid" id="grid"></div>
-
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-  const socket = io();
-  const grid = document.getElementById('grid');
-  const refresh = document.getElementById('refresh');
-  const clearAll = document.getElementById('clear');
-  const clearActive = document.getElementById('clearActive');
-
-  let ACTIVE = null;
-
-  function render(questions){
-    grid.innerHTML = questions.map(q => `
-      <div class="card">
-        <div class="tx">${escapeHTML(q.text)}</div>
-        <div class="meta">${q.ts}</div>
-        <div class="row">
-          <button class="btn ok" data-act="go" data-id="${q.id}">방송 표시</button>
-          <button class="btn danger" data-act="del" data-id="${q.id}">삭제</button>
-          ${ACTIVE===q.id ? '<span class="badge">방송중</span>' : ''}
+const grid=document.getElementById("grid");let activeId=null;
+function render(qs){
+  grid.innerHTML=qs.map(q=>{
+    const d=new Date(q.createdAt);
+    const t=d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    const act=q.id===activeId?"active":"";
+    return `<div class="card ${act}" data-id="${q.id}">
+      <div class="txt">${escapeHTML(q.text)}</div>
+      <div class="row">
+        <small>${t}</small>
+        <div>
+          <button class='btn btn-g' data-show='${q.id}'>방송표시</button>
+          <button class='btn btn-d' data-del='${q.id}'>삭제</button>
         </div>
-      </div>
-    `).join('');
-  }
-
-  function escapeHTML(s){return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
-
-  grid.addEventListener('click', (e)=>{
-    const id = e.target.dataset.id;
-    const act = e.target.dataset.act;
-    if(!id || !act) return;
-    if(act==='go'){ socket.emit('spotlight:set', id); }
-    if(act==='del'){ socket.emit('question:delete', id); }
-  });
-
-  refresh.onclick = ()=> socket.emit('noop', Date.now());
-  clearAll.onclick = ()=> socket.emit('questions:clear');
-  clearActive.onclick = ()=> socket.emit('spotlight:set', null);
-
-  socket.on('init', ({questions, activeId}) => { ACTIVE = activeId; render(questions); });
-  socket.on('questions:update', (qs) => render(qs));
-  socket.on('spotlight:update', ({activeId}) => { ACTIVE = activeId; });
+      </div></div>`;
+  }).join("")||"<div class='muted'>질문이 없습니다.</div>";
+}
+grid.onclick=async(e)=>{
+  const idS=e.target.dataset.show,idD=e.target.dataset.del;
+  if(idS)await fetch(`/api/spotlight/${idS}`,{method:"POST"});
+  if(idD&&confirm("삭제할까요?"))await fetch(`/api/questions/${idD}`,{method:"DELETE"});
+}
+document.getElementById("clear").onclick=async()=>{
+  if(confirm("전체 삭제할까요?"))await fetch("/api/questions",{method:"DELETE"});
+}
+const es=new EventSource("/sse");
+es.addEventListener("init",e=>{const d=JSON.parse(e.data);activeId=d.activeId;render(d.questions);});
+es.addEventListener("questions",e=>render(JSON.parse(e.data)));
+es.addEventListener("spotlight",e=>{
+  activeId=JSON.parse(e.data).activeId;
+  document.querySelectorAll(".card").forEach(el=>el.classList.toggle("active",el.dataset.id===activeId));
+});
+function escapeHTML(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]))}
 </script>
 </body>
 </html>

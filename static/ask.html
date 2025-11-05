@@ -2,88 +2,81 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>질문 등록</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0f1420; --panel:#171c29; --ink:#e8ecf4; --sub:#9aa4b2; --accent:#6d7cff;
-    --muted:#0c111b;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0; font-family:Pretendard, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--ink);}
-  .wrap{max-width:980px; margin:40px auto; padding:24px; background:var(--panel); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
-  h1{margin:0 0 18px; font-size:28px;}
-  .ta{width:100%; min-height:240px; background:#0e1320; color:#dbe7ff; border:1px solid #232a3a; border-radius:12px; padding:18px; font-size:18px; line-height:1.65; outline:none;}
-  .row{display:flex; gap:8px; align-items:center; margin-top:16px; color:var(--sub);}
-  .btn{background:var(--accent); color:white; border:none; border-radius:12px; padding:10px 18px; font-size:15px; cursor:pointer;}
-  .link{color:#b8c0ff; text-decoration:none;}
-  .list{margin-top:26px; background:var(--muted); border:1px solid #22293a; border-radius:14px; padding:12px;}
-  .item{padding:14px 12px; border-bottom:1px dashed #283049; display:grid; grid-template-columns:1fr auto; gap:12px;}
-  .item:last-child{border-bottom:none;}
-  .time{color:#97a2b5; font-size:13px; margin-top:6px;}
-  .del{background:#394155; color:#e9f1ff; border:none; border-radius:10px; padding:8px 12px; cursor:pointer;}
-  .empty{color:#7f8aa3; padding:18px;}
+:root{
+  --bg:#0b1020;--panel:#121a2d;--accent:#7f89ff;
+  --text:#e7eeff;--muted:#9db1d1aa;--danger:#ff5470;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;}
+.wrap{max-width:1080px;margin:48px auto;padding:0 20px}
+h1{margin:0 0 18px}
+.card{background:var(--panel);border-radius:14px;padding:18px 22px;}
+textarea{width:100%;height:220px;background:#0e1430;border:1px solid #223058;border-radius:12px;
+  color:var(--text);padding:18px 20px;font-size:18px;line-height:1.6;}
+.row{display:flex;gap:12px;align-items:center;margin-top:14px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:700}
+.list{margin-top:28px}
+.q{background:#0e1430;border:1px solid #23335c;border-radius:12px;padding:14px 16px;margin:10px 0;
+  display:flex;justify-content:space-between;align-items:center;}
+.btn-del{background:transparent;color:var(--danger);border:1px solid #3f2b38;border-radius:10px;padding:8px 12px}
+.muted{color:var(--muted)}
+.nav{margin-bottom:12px}
+.nav a{color:#b6c6ff;margin-right:8px;text-decoration:none}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>질문 등록</h1>
-    <textarea id="ta" class="ta" placeholder="질문을 입력하고 ‘등록’을 누르세요.&#10;가능하면 한 문장으로 간결하게 써 주세요."></textarea>
+<div class="wrap">
+  <div class="nav">
+    <a href="/mod">사회자 패널</a> · <a href="/spotlight">방송 화면</a>
+  </div>
+  <h1>질문 등록</h1>
+  <div class="card">
+    <textarea id="ta" placeholder="질문을 입력하고 ‘등록’을 누르세요."></textarea>
     <div class="row">
-      <button id="submit" class="btn">등록</button>
-      <span>사회자 페이지: <a class="link" href="/mod" target="_blank">/mod</a> · 방송화면: <a class="link" href="/spotlight" target="_blank">/spotlight</a></span>
-    </div>
-
-    <div class="list">
-      <div id="list"></div>
+      <button id="btn" class="btn">등록</button>
+      <span class="muted">사회자: /mod · 방송: /spotlight</span>
     </div>
   </div>
+  <div id="list" class="list"></div>
+</div>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-  const socket = io();
+const $=s=>document.querySelector(s);
+const ta=$("#ta"), btn=$("#btn"), list=$("#list");
 
-  const ta = document.getElementById('ta');
-  const btn = document.getElementById('submit');
-  const list = document.getElementById('list');
+btn.onclick=async()=>{
+  const text=ta.value.trim();
+  if(!text)return;
+  btn.disabled=true;
+  await fetch("/api/questions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+  ta.value="";btn.disabled=false;
+}
 
-  function render(questions){
-    if(!questions.length){
-      list.innerHTML = '<div class="empty">아직 등록된 질문이 없습니다.</div>';
-      return;
-    }
-    list.innerHTML = questions.map(q => `
-      <div class="item">
-        <div>
-          <div>${escapeHTML(q.text)}</div>
-          <div class="time">${q.ts}</div>
-        </div>
-        <button class="del" data-id="${q.id}">삭제</button>
-      </div>
-    `).join('');
-  }
+list.onclick=async(e)=>{
+  const id=e.target.dataset.del;
+  if(!id)return;
+  if(!confirm("삭제할까요?"))return;
+  await fetch(`/api/questions/${id}`,{method:"DELETE"});
+}
 
-  function escapeHTML(s){return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function render(qs){
+  list.innerHTML=qs.map(q=>{
+    const d=new Date(q.createdAt);
+    const t=d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    return `<div class="q"><div>${escapeHTML(q.text)}</div><small>${t}</small>
+    <button class='btn-del' data-del='${q.id}'>삭제</button></div>`
+  }).join("")||`<div class='muted'>등록된 질문이 없습니다.</div>`;
+}
 
-  btn.onclick = () => {
-    const text = ta.value.trim();
-    if(!text) return;
-    socket.emit('question:add', text);
-    ta.value = '';
-  };
+const es=new EventSource("/sse");
+es.addEventListener("init",e=>render(JSON.parse(e.data).questions));
+es.addEventListener("questions",e=>render(JSON.parse(e.data)));
 
-  list.addEventListener('click', (e)=>{
-    const id = e.target.dataset.id;
-    if(e.target.classList.contains('del') && id){
-      socket.emit('question:delete', id);
-    }
-  });
-
-  socket.on('init', ({questions}) => render(questions));
-  socket.on('questions:update', render);
+function escapeHTML(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]))}
 </script>
 </body>
 </html>
